@@ -175,21 +175,16 @@ def _parse_response(resp: httpx.Response) -> Any:
         }
 
     if resp.is_success:
-        if "application/json" in content_type:
-            try:
-                return resp.json()
-            except (json.JSONDecodeError, ValueError):
-                pass
-        if content_type.startswith("text/") or content_type.startswith("image/svg"):
-            return resp.text
-        if content_type.startswith(("image/", "application/octet-stream")):
-            # e.g. /opens tracking pixel - don't dump binary into the chat.
+        # Binary payloads (e.g. the /opens tracking pixel): summarize instead of
+        # dumping raw bytes into the chat. SVG is treated as text below.
+        if content_type.startswith(("image/", "application/octet-stream")) and not content_type.startswith("image/svg"):
             return {
                 "status_code": resp.status_code,
                 "content_type": content_type,
                 "bytes": len(resp.content),
             }
-        # Unknown content type: try JSON, fall back to text.
+        # Many Notifuse handlers return JSON with a sniffed text/plain content
+        # type, so always attempt to parse JSON first and fall back to raw text.
         try:
             return resp.json()
         except (json.JSONDecodeError, ValueError):

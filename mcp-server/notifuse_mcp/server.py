@@ -26,12 +26,14 @@ META_USE_TOKEN = f"{TOOL_PREFIX}use_token"
 META_AUTH_STATUS = f"{TOOL_PREFIX}auth_status"
 
 
-def _input_schema(ep: Endpoint) -> dict[str, Any]:
+def _input_schema(ep: Endpoint, default_workspace: str | None = None) -> dict[str, Any]:
     properties: dict[str, Any] = {}
     required: list[str] = []
     for param in (*ep.query, *ep.body):
         properties[param.name] = param.schema()
-        if param.required:
+        # When a default workspace is configured it is auto-injected by the
+        # client, so don't force callers to supply it.
+        if param.required and not (param.name == "workspace_id" and default_workspace):
             required.append(param.name)
     schema: dict[str, Any] = {
         "type": "object",
@@ -43,13 +45,13 @@ def _input_schema(ep: Endpoint) -> dict[str, Any]:
     return schema
 
 
-def _endpoint_tool(ep: Endpoint) -> types.Tool:
+def _endpoint_tool(ep: Endpoint, default_workspace: str | None = None) -> types.Tool:
     auth_note = "" if ep.auth else " (no auth required)"
     description = f"[{ep.method} {ep.path}]{auth_note} {ep.summary}"
     return types.Tool(
         name=f"{TOOL_PREFIX}{ep.name}",
         description=description,
-        inputSchema=_input_schema(ep),
+        inputSchema=_input_schema(ep, default_workspace),
     )
 
 
@@ -131,7 +133,8 @@ def build_server(client: NotifuseClient) -> Server:
 
     @server.list_tools()
     async def list_tools() -> list[types.Tool]:
-        return _meta_tools() + [_endpoint_tool(ep) for ep in ENDPOINTS]
+        default_ws = client.config.workspace_id
+        return _meta_tools() + [_endpoint_tool(ep, default_ws) for ep in ENDPOINTS]
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:

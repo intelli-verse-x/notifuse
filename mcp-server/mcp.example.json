@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "notifuse": {
+      "command": "notifuse-mcp",
+      "env": {
+        "NOTIFUSE_API_URL": "https://notifuse.example.com",
+        "NOTIFUSE_API_KEY": "replace_with_workspace_api_key",
+        "NOTIFUSE_WORKSPACE_ID": "replace_with_workspace_id"
+      }
+    }
+  }
+}

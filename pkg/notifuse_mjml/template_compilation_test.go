@@ -2,9 +2,11 @@ package notifuse_mjml
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/Notifuse/notifuse/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +59,7 @@ func TestTrackLinks(t *testing.T) {
 				MessageID:      "test-message",
 			},
 			expectedContains: []string{
-				"https://track.example.com/redirect/visit?mid=test-message&wid=test-workspace&ts=",
+				"https://track.example.com/redirect/r/",
 			},
 			shouldError: false,
 		},
@@ -112,7 +114,7 @@ func TestTrackLinks(t *testing.T) {
 				`href="mailto:test@example.com"`, // mailto should be unchanged
 				`href="tel:+1234567890"`,         // tel should be unchanged
 				`href="sms:+1234567890"`,         // sms should be unchanged
-				"track.example.com/visit",        // normal links should be tracked
+				"track.example.com/r/",           // normal links should be tracked
 			},
 			expectedNotContains: []string{
 				"url=mailto", // mailto should NOT be in a tracking redirect URL param
@@ -134,7 +136,7 @@ func TestTrackLinks(t *testing.T) {
 			},
 			expectedContains: []string{
 				`href="#section1"`,        // anchor should be unchanged
-				"track.example.com/visit", // normal links should be tracked
+				"track.example.com/r/",    // normal links should be tracked
 			},
 			shouldError: false,
 		},
@@ -151,7 +153,7 @@ func TestTrackLinks(t *testing.T) {
 			},
 			expectedContains: []string{
 				`href="javascript:void(0)"`, // javascript should be unchanged
-				"track.example.com/visit",   // normal links should be tracked
+				"track.example.com/r/",      // normal links should be tracked
 			},
 			shouldError: false,
 		},
@@ -202,7 +204,7 @@ func TestTrackLinks(t *testing.T) {
 				MessageID:      "test-message",
 			},
 			expectedContains: []string{
-				"https://track.example.com/redirect/visit?mid=test-message&wid=test-workspace&ts=",
+				"https://track.example.com/redirect/r/",
 			},
 			shouldError: false,
 		},
@@ -238,7 +240,7 @@ func TestTrackLinks(t *testing.T) {
 				MessageID:      "test-message",
 			},
 			expectedContains: []string{
-				"https://track.example.com/visit?mid=test-message&wid=test-workspace&ts=",
+				"https://track.example.com/r/",
 				"class=\"button\"",
 				"<span>Click Here</span>",
 			},
@@ -293,6 +295,62 @@ func TestTrackLinksInvalidHTML(t *testing.T) {
 	// Should still process the href attribute
 	if !strings.Contains(result, "track.example.com") {
 		t.Error("Expected tracking URL to be added even with malformed HTML")
+	}
+}
+
+// TestTrackLinks_PreservesUTMInEncryptedToken verifies that when click tracking
+// is enabled, the UTM parameters are NOT dropped: they must be appended to the
+// destination URL that gets encrypted into the /r/{token} redirect link.
+func TestTrackLinks_PreservesUTMInEncryptedToken(t *testing.T) {
+	trackingSettings := TrackingSettings{
+		EnableTracking: true,
+		Endpoint:       "https://track.example.com",
+		UTMSource:      "newsletter",
+		UTMMedium:      "email",
+		UTMCampaign:    "spring-sale",
+		UTMContent:     "hero-button",
+		UTMTerm:        "running-shoes",
+		WorkspaceID:    "ws-1",
+		MessageID:      "msg-1",
+	}
+
+	htmlInput := `<a href="https://shop.example.com/product?ref=email">Buy Now</a>`
+
+	result, err := TrackLinks(htmlInput, trackingSettings)
+	if err != nil {
+		t.Fatalf("TrackLinks failed: %v", err)
+	}
+
+	// Extract the encrypted /r/{token} link that TrackLinks generated
+	tokenRegex := regexp.MustCompile(`href="https://track\.example\.com/r/([^"]+)"`)
+	m := tokenRegex.FindStringSubmatch(result)
+	if m == nil {
+		t.Fatalf("expected a /r/{token} tracking link, got: %s", result)
+	}
+
+	// Decrypt the token: format is "messageID\nworkspaceID\ntimestamp\ndestinationURL"
+	plaintext, err := crypto.DecryptTrackingToken(m[1])
+	if err != nil {
+		t.Fatalf("failed to decrypt tracking token: %v", err)
+	}
+	parts := strings.Split(plaintext, "\n")
+	if len(parts) != 4 {
+		t.Fatalf("expected 4 token parts, got %d: %q", len(parts), plaintext)
+	}
+	destinationURL := parts[3]
+
+	// The destination URL embedded in the token must carry every UTM parameter
+	for _, want := range []string{
+		"utm_source=newsletter",
+		"utm_medium=email",
+		"utm_campaign=spring-sale",
+		"utm_content=hero-button",
+		"utm_term=running-shoes",
+		"ref=email", // pre-existing query params must be preserved too
+	} {
+		if !strings.Contains(destinationURL, want) {
+			t.Errorf("expected destination URL %q to contain %q", destinationURL, want)
+		}
 	}
 }
 
@@ -518,18 +576,16 @@ func TestTrackingPixelPlacement(t *testing.T) {
 		t.Fatalf("TrackLinks failed: %v", err)
 	}
 
-	// Check that the tracking pixel is inserted before the closing body tag
-	// Check for the pattern with ts parameter (which is dynamic)
-	hasPixelPattern := strings.Contains(result, `opens?mid=test-message&wid=test-workspace&ts=`) &&
-		strings.Contains(result, `alt="" width="1" height="1">`)
+	// Check that the tracking pixel uses encrypted /t/ format and new styling
+	hasPixelPattern := strings.Contains(result, `/t/`) &&
+		strings.Contains(result, `alt="" style="border:0;margin:0;padding:0;">`)
 	if !hasPixelPattern {
-		t.Errorf("Expected tracking pixel pattern to be present in the HTML. Result: %s", result)
+		t.Errorf("Expected encrypted tracking pixel with /t/ path and new styling. Result: %s", result)
 	}
 
 	// Check that the pixel is placed before the closing body tag
 	bodyCloseIndex := strings.Index(result, "</body>")
-	pixelMarker := `opens?mid=test-message&wid=test-workspace&ts=`
-	pixelIndex := strings.Index(result, pixelMarker)
+	pixelIndex := strings.Index(result, `/t/`)
 
 	if bodyCloseIndex == -1 {
 		t.Error("Expected closing body tag to be present")
@@ -560,17 +616,16 @@ func TestTrackingPixelWithoutBodyTag(t *testing.T) {
 		t.Fatalf("TrackLinks failed: %v", err)
 	}
 
-	// Check that the tracking pixel is appended to the end as fallback
-	// Check for the pattern with ts parameter (which is dynamic)
-	hasPixelPattern := strings.Contains(result, `opens?mid=test-message&wid=test-workspace&ts=`) &&
-		strings.Contains(result, `alt="" width="1" height="1">`)
+	// Check that the tracking pixel uses encrypted /t/ format
+	hasPixelPattern := strings.Contains(result, `/t/`) &&
+		strings.Contains(result, `alt="" style="border:0;margin:0;padding:0;">`)
 	if !hasPixelPattern {
-		t.Error("Expected tracking pixel pattern to be present in the HTML")
+		t.Error("Expected encrypted tracking pixel with /t/ path and new styling")
 	}
 
-	// Check that the pixel is at the end (check for the closing tag pattern)
-	if !strings.HasSuffix(strings.TrimSpace(result), `alt="" width="1" height="1">`) {
-		t.Error("Expected tracking pixel to be at the end when no body tag is present")
+	// Check that the table-wrapped pixel is at the end
+	if !strings.HasSuffix(strings.TrimSpace(result), `</td></tr></table>`) {
+		t.Error("Expected table-wrapped tracking pixel to be at the end when no body tag is present")
 	}
 }
 
@@ -2320,4 +2375,236 @@ func TestCompileTemplateWithMJLiquidTimeout(t *testing.T) {
 	// Should fail due to timeout, not crash
 	assert.False(t, resp.Success)
 	assert.NotNil(t, resp.Error)
+}
+
+// minimalTree returns the smallest valid visual_editor_tree the compiler accepts.
+func minimalTree() EmailBlock {
+	textBase := NewBaseBlock("text-1", MJMLComponentMjText)
+	textBase.Content = stringPtr("hello")
+	textBlock := &MJTextBlock{BaseBlock: textBase}
+
+	columnBlock := &MJColumnBlock{BaseBlock: NewBaseBlock("column-1", MJMLComponentMjColumn)}
+	columnBlock.Children = []EmailBlock{textBlock}
+
+	sectionBlock := &MJSectionBlock{BaseBlock: NewBaseBlock("section-1", MJMLComponentMjSection)}
+	sectionBlock.Children = []EmailBlock{columnBlock}
+
+	bodyBlock := &MJBodyBlock{BaseBlock: NewBaseBlock("body-1", MJMLComponentMjBody)}
+	bodyBlock.Children = []EmailBlock{sectionBlock}
+
+	mjml := &MJMLBlock{BaseBlock: NewBaseBlock("mjml-1", MJMLComponentMjml)}
+	mjml.Children = []EmailBlock{bodyBlock}
+	return mjml
+}
+
+func TestCompileTemplateSubjectRendered(t *testing.T) {
+	subject := "Hi {{ contact.first_name }}"
+	preview := "Welcome {{ contact.first_name }}"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+		SubjectPreview:   &preview,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	if assert.NotNil(t, resp.Subject) {
+		assert.Equal(t, "Hi Pierre", *resp.Subject)
+	}
+	if assert.NotNil(t, resp.SubjectPreview) {
+		assert.Equal(t, "Welcome Pierre", *resp.SubjectPreview)
+	}
+}
+
+func TestCompileTemplateSubjectNoLiquid(t *testing.T) {
+	subject := "Plain subject line"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	if assert.NotNil(t, resp.Subject) {
+		assert.Equal(t, "Plain subject line", *resp.Subject)
+	}
+}
+
+func TestCompileTemplateSubjectEmpty(t *testing.T) {
+	// No subject provided at all → response omits subject field.
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	assert.Nil(t, resp.Subject)
+	assert.Nil(t, resp.SubjectPreview)
+}
+
+func TestCompileTemplateSubjectEmptyString(t *testing.T) {
+	// Subject pointer set but empty string → treated as not provided.
+	empty := ""
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &empty,
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	assert.Nil(t, resp.Subject)
+}
+
+func TestCompileTemplateSubjectPreserveLiquid(t *testing.T) {
+	subject := "Hi {{ contact.first_name }}"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+		PreserveLiquid:   true,
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	if assert.NotNil(t, resp.Subject) {
+		assert.Equal(t, "Hi {{ contact.first_name }}", *resp.Subject)
+	}
+}
+
+func TestCompileTemplateSubjectWebChannel(t *testing.T) {
+	subject := "Hi {{ contact.first_name }}"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+		Channel:          "web",
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	if assert.NotNil(t, resp.Subject) {
+		// web channel skips personalization for the body; subject mirrors that.
+		assert.Equal(t, "Hi {{ contact.first_name }}", *resp.Subject)
+	}
+}
+
+func TestCompileTemplateSubjectLiquidError(t *testing.T) {
+	// Unclosed Liquid tag in the subject should short-circuit compilation.
+	subject := "Hi {{ contact.first_name"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.False(t, resp.Success)
+	assert.NotNil(t, resp.Error)
+	// Body should NOT have been compiled because subject failed first.
+	assert.Nil(t, resp.MJML)
+	assert.Nil(t, resp.HTML)
+}
+
+func TestCompileTemplateSubjectPreviewLiquidError(t *testing.T) {
+	// Valid subject, malformed subject_preview → subject is returned, body skipped.
+	subject := "Hi {{ contact.first_name }}"
+	preview := "Welcome {{ contact.first_name"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+		SubjectPreview:   &preview,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.False(t, resp.Success)
+	assert.NotNil(t, resp.Error)
+	if assert.NotNil(t, resp.Subject) {
+		assert.Equal(t, "Hi Pierre", *resp.Subject)
+	}
+	assert.Nil(t, resp.SubjectPreview)
+}
+
+func TestCompileTemplateSubjectReturnedOnBodyError(t *testing.T) {
+	// Valid subject Liquid but malformed body Liquid (unclosed expression in
+	// mj-text content) must still return the rendered subject so the UI can
+	// display it next to the error.
+	subject := "Hi {{ contact.first_name }}"
+
+	textBase := NewBaseBlock("text-1", MJMLComponentMjText)
+	textBase.Content = stringPtr("Hello {{ contact.first_name")
+	textBlock := &MJTextBlock{BaseBlock: textBase}
+
+	columnBlock := &MJColumnBlock{BaseBlock: NewBaseBlock("column-1", MJMLComponentMjColumn)}
+	columnBlock.Children = []EmailBlock{textBlock}
+
+	sectionBlock := &MJSectionBlock{BaseBlock: NewBaseBlock("section-1", MJMLComponentMjSection)}
+	sectionBlock.Children = []EmailBlock{columnBlock}
+
+	bodyBlock := &MJBodyBlock{BaseBlock: NewBaseBlock("body-1", MJMLComponentMjBody)}
+	bodyBlock.Children = []EmailBlock{sectionBlock}
+
+	root := &MJMLBlock{BaseBlock: NewBaseBlock("mjml-1", MJMLComponentMjml)}
+	root.Children = []EmailBlock{bodyBlock}
+
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: root,
+		Subject:          &subject,
+		TemplateData:     MapOfAny{"contact": map[string]interface{}{"first_name": "Pierre"}},
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.False(t, resp.Success)
+	assert.NotNil(t, resp.Error)
+	if assert.NotNil(t, resp.Subject) {
+		assert.Equal(t, "Hi Pierre", *resp.Subject)
+	}
+}
+
+func TestCompileTemplateSubjectNoTemplateData(t *testing.T) {
+	// Liquid expression in subject but no data → ProcessLiquidTemplate is skipped
+	// because TemplateData is empty (mirrors body behavior).
+	subject := "Hi {{ contact.first_name }}"
+	req := CompileTemplateRequest{
+		WorkspaceID:      "ws",
+		MessageID:        "msg",
+		VisualEditorTree: minimalTree(),
+		Subject:          &subject,
+	}
+
+	resp, err := CompileTemplate(req)
+	assert.NoError(t, err)
+	assert.True(t, resp.Success)
+	if assert.NotNil(t, resp.Subject) {
+		assert.Equal(t, "Hi {{ contact.first_name }}", *resp.Subject)
+	}
 }

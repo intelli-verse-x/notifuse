@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ import (
 	"github.com/Notifuse/notifuse/pkg/logger"
 	"github.com/Notifuse/notifuse/pkg/mailer"
 	"github.com/Notifuse/notifuse/pkg/ratelimiter"
-	"github.com/Notifuse/notifuse/pkg/smtp_relay"
+	"github.com/Notifuse/notifuse/pkg/smtp_bridge"
 	"github.com/Notifuse/notifuse/pkg/tracing"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -57,12 +58,14 @@ type AppInterface interface {
 	GetTransactionalNotificationRepository() domain.TransactionalNotificationRepository
 	GetTelemetryRepository() domain.TelemetryRepository
 	GetEmailQueueRepository() domain.EmailQueueRepository
+	GetTaskRepository() domain.TaskRepository
 
 	// Service getters for testing
 	GetAuthService() interface{} // Returns *service.AuthService but defined as interface{} to avoid import cycle
 	GetTransactionalNotificationService() domain.TransactionalNotificationService
 	GetEmailQueueWorker() *queue.EmailQueueWorker
 	GetAutomationScheduler() *service.AutomationScheduler
+	GetTaskScheduler() *service.TaskScheduler
 
 	// Server status methods
 	IsServerCreated() bool
@@ -174,9 +177,9 @@ type App struct {
 	// Rate limiter (global, namespace-based)
 	rateLimiter *ratelimiter.RateLimiter
 
-	// SMTP relay server
-	smtpRelayHandlerService *service.SMTPRelayHandlerService
-	smtpRelayServer         interface {
+	// SMTP bridge server
+	smtpBridgeHandlerService *service.SMTPBridgeHandlerService
+	smtpBridgeServer         interface {
 		Start() error
 		Shutdown(context.Context) error
 	}
@@ -471,7 +474,7 @@ func (a *App) InitServices() error {
 	// Configure policies for different use cases
 	a.rateLimiter.SetPolicy("signin", 5, 5*time.Minute)           // Strict auth
 	a.rateLimiter.SetPolicy("verify", 5, 5*time.Minute)           // Strict auth
-	a.rateLimiter.SetPolicy("smtp", 5, 1*time.Minute)             // SMTP relay
+	a.rateLimiter.SetPolicy("smtp", 5, 1*time.Minute)             // SMTP bridge
 	a.rateLimiter.SetPolicy("subscribe:email", 10, 1*time.Minute)    // Public subscribe by email
 	a.rateLimiter.SetPolicy("subscribe:ip", 50, 1*time.Minute)      // Public subscribe by IP
 	a.rateLimiter.SetPolicy("preferences:email", 20, 1*time.Minute)  // Public preferences by email
@@ -498,7 +501,7 @@ func (a *App) InitServices() error {
 
 	// Initialize setup service with environment config from config loader
 	// Config tracks which values came from actual env vars (not database, not generated)
-	rootEmail, apiEndpoint, smtpHost, smtpUsername, smtpPassword, smtpFromEmail, smtpFromName, smtpPort, smtpUseTLS, smtpRelayEnabled, smtpRelayDomain, smtpRelayTLSCertBase64, smtpRelayTLSKeyBase64, smtpRelayPort := a.config.GetEnvValues()
+	rootEmail, apiEndpoint, smtpHost, smtpUsername, smtpPassword, smtpFromEmail, smtpFromName, smtpPort, smtpUseTLS, smtpBridgeEnabled, smtpBridgeDomain, smtpBridgeTLSCertBase64, smtpBridgeTLSKeyBase64, smtpBridgePort := a.config.GetEnvValues()
 	envConfig := &service.EnvironmentConfig{
 		RootEmail:              rootEmail,
 		APIEndpoint:            apiEndpoint,
@@ -509,11 +512,12 @@ func (a *App) InitServices() error {
 		SMTPFromEmail:          smtpFromEmail,
 		SMTPFromName:           smtpFromName,
 		SMTPUseTLS:             smtpUseTLS,
-		SMTPRelayEnabled:       smtpRelayEnabled,
-		SMTPRelayDomain:        smtpRelayDomain,
-		SMTPRelayPort:          smtpRelayPort,
-		SMTPRelayTLSCertBase64: smtpRelayTLSCertBase64,
-		SMTPRelayTLSKeyBase64:  smtpRelayTLSKeyBase64,
+		SMTPBridgeEnabled:       smtpBridgeEnabled,
+		SMTPBridgeDomain:        smtpBridgeDomain,
+		SMTPBridgePort:          smtpBridgePort,
+		SMTPBridgeTLSCertBase64: smtpBridgeTLSCertBase64,
+		SMTPBridgeTLSKeyBase64:  smtpBridgeTLSKeyBase64,
+		SMTPBridgeTLSMode:       a.config.EnvValues.SMTPBridgeTLSMode,
 	}
 
 	a.setupService = service.NewSetupService(
@@ -648,6 +652,12 @@ func (a *App) InitServices() error {
 	// If task scheduler is disabled (e.g., in tests), also disable background task execution
 	a.taskService.SetAutoExecuteImmediate(a.config.TaskScheduler.Enabled)
 
+	// Execution mode is coupled to the internal scheduler: when this instance runs its own
+	// scheduler it executes due tasks in-process, instead of dispatching over HTTP to its own
+	// public ingress (which fails in single-pod-per-tenant topologies). When the scheduler is
+	// disabled (scale-out + external cron), HTTP dispatch is kept for fan-out across replicas.
+	a.taskService.SetDirectExecution(a.config.TaskScheduler.Enabled)
+
 	// Initialize transactional notification service
 	a.transactionalNotificationService = service.NewTransactionalNotificationService(
 		a.transactionalNotificationRepo,
@@ -667,6 +677,7 @@ func (a *App) InitServices() error {
 		a.logger,
 		a.workspaceRepo,
 		a.messageHistoryRepo,
+		a.contactRepo,
 	)
 
 	// Initialize Supabase service (before workspace service)
@@ -684,8 +695,14 @@ func (a *App) InitServices() error {
 		a.logger,
 	)
 
-	// Initialize data feed fetcher for external data in broadcasts
-	a.dataFeedFetcher = broadcast.NewDataFeedFetcher(a.logger)
+	// Initialize data feed fetcher for external data in broadcasts.
+	// Uses an SSRF-protected HTTP client by default; private/loopback targets are
+	// only permitted when explicitly opted in via BROADCAST_DATA_FEED_ALLOW_PRIVATE_HOSTS.
+	if a.config.Broadcast.AllowPrivateDataFeedHosts {
+		a.dataFeedFetcher = broadcast.NewUnsafeDataFeedFetcher(a.logger)
+	} else {
+		a.dataFeedFetcher = broadcast.NewDataFeedFetcher(a.logger)
+	}
 
 	// Initialize broadcast service
 	a.broadcastService = service.NewBroadcastService(
@@ -700,6 +717,7 @@ func (a *App) InitServices() error {
 		a.authService,
 		a.eventBus,           // Pass the event bus
 		a.messageHistoryRepo, // Message history repository
+		a.emailQueueRepo,     // Email queue for mid-flight pause/resume/cancel
 		a.listService,        // List service for web publication validation
 		a.dataFeedFetcher,    // Data feed fetcher for global/recipient data
 		a.config.APIEndpoint, // API endpoint for tracking URLs
@@ -970,8 +988,8 @@ func (a *App) InitServices() error {
 		a.config.AutomationScheduler.BatchSize,
 	)
 
-	// Initialize SMTP relay handler service
-	a.smtpRelayHandlerService = service.NewSMTPRelayHandlerService(
+	// Initialize SMTP bridge handler service
+	a.smtpBridgeHandlerService = service.NewSMTPBridgeHandlerService(
 		a.authService,
 		a.transactionalNotificationService,
 		a.workspaceRepo,
@@ -980,49 +998,53 @@ func (a *App) InitServices() error {
 		a.rateLimiter, // Use global rate limiter
 	)
 
-	// Initialize SMTP relay server if enabled
-	if a.config.SMTPRelay.Enabled {
-		// Setup TLS configuration
-		tlsConfig, err := smtp_relay.SetupTLS(smtp_relay.TLSConfig{
-			CertBase64: a.config.SMTPRelay.TLSCertBase64,
-			KeyBase64:  a.config.SMTPRelay.TLSKeyBase64,
-			Logger:     a.logger,
-		})
-		if err != nil {
-			a.logger.WithField("error", err.Error()).Error("Failed to setup TLS for SMTP relay")
-			return fmt.Errorf("failed to setup TLS for SMTP relay: %w", err)
+	// Initialize SMTP bridge server if enabled
+	if a.config.SMTPBridge.Enabled {
+		// TLS is required for starttls and implicit modes; skipped for off.
+		var tlsConfig *tls.Config
+		if a.config.SMTPBridge.TLSMode != smtp_bridge.ModeOff {
+			cfg, err := smtp_bridge.SetupTLS(smtp_bridge.TLSConfig{
+				CertBase64: a.config.SMTPBridge.TLSCertBase64,
+				KeyBase64:  a.config.SMTPBridge.TLSKeyBase64,
+				Logger:     a.logger,
+			})
+			if err != nil {
+				a.logger.WithField("error", err.Error()).Error("Failed to setup TLS for SMTP bridge")
+				return fmt.Errorf("failed to setup TLS for SMTP bridge: %w", err)
+			}
+			tlsConfig = cfg
 		}
 
 		// Create SMTP backend with authentication and message handlers
-		backend := smtp_relay.NewBackend(
-			a.smtpRelayHandlerService.Authenticate,
-			a.smtpRelayHandlerService.HandleMessage,
+		backend := smtp_bridge.NewBackend(
+			a.smtpBridgeHandlerService.Authenticate,
+			a.smtpBridgeHandlerService.HandleMessage,
 			a.logger,
 		)
 
 		// Create SMTP server configuration
-		smtpConfig := smtp_relay.ServerConfig{
-			Host:       a.config.SMTPRelay.Host,
-			Port:       a.config.SMTPRelay.Port,
-			Domain:     a.config.SMTPRelay.Domain,
-			TLSConfig:  tlsConfig,
-			RequireTLS: a.config.IsProduction(),
-			Logger:     a.logger,
+		smtpConfig := smtp_bridge.ServerConfig{
+			Host:      a.config.SMTPBridge.Host,
+			Port:      a.config.SMTPBridge.Port,
+			Domain:    a.config.SMTPBridge.Domain,
+			Mode:      a.config.SMTPBridge.TLSMode,
+			TLSConfig: tlsConfig,
+			Logger:    a.logger,
 		}
 
 		// Create the SMTP server
-		smtpRelayServer, err := smtp_relay.NewServer(smtpConfig, backend)
+		smtpBridgeServer, err := smtp_bridge.NewServer(smtpConfig, backend)
 		if err != nil {
-			a.logger.WithField("error", err.Error()).Error("Failed to create SMTP relay server")
-			return fmt.Errorf("failed to create SMTP relay server: %w", err)
+			a.logger.WithField("error", err.Error()).Error("Failed to create SMTP bridge server")
+			return fmt.Errorf("failed to create SMTP bridge server: %w", err)
 		}
 
-		a.smtpRelayServer = smtpRelayServer
+		a.smtpBridgeServer = smtpBridgeServer
 		a.logger.WithFields(map[string]interface{}{
-			"port":   a.config.SMTPRelay.Port,
-			"domain": a.config.SMTPRelay.Domain,
-			"tls":    tlsConfig != nil,
-		}).Info("SMTP relay server initialized successfully")
+			"port":   a.config.SMTPBridge.Port,
+			"domain": a.config.SMTPBridge.Domain,
+			"mode":   a.config.SMTPBridge.TLSMode,
+		}).Info("SMTP bridge server initialized successfully")
 	}
 
 	return nil
@@ -1049,9 +1071,6 @@ func (a *App) InitHandlers() error {
 		a.config,
 		getJWTSecret,
 		a.logger)
-	// Determine if SMTP relay TLS is enabled (check if cert is configured)
-	smtpRelayTLSEnabled := a.config.SMTPRelay.TLSCertBase64 != ""
-
 	rootHandler := httpHandler.NewRootHandler(
 		"console/dist",
 		"notification_center/dist",
@@ -1060,10 +1079,10 @@ func (a *App) InitHandlers() error {
 		a.config.Version,
 		a.config.RootEmail,
 		&a.isInstalled,
-		a.config.SMTPRelay.Enabled,
-		a.config.SMTPRelay.Domain,
-		a.config.SMTPRelay.Port,
-		smtpRelayTLSEnabled,
+		a.config.SMTPBridge.Enabled,
+		a.config.SMTPBridge.Domain,
+		a.config.SMTPBridge.Port,
+		a.config.SMTPBridge.TLSMode,
 		a.workspaceRepo,
 		a.blogService,
 		a.blogCache,
@@ -1073,6 +1092,16 @@ func (a *App) InitHandlers() error {
 		a.settingService,
 		a.logger,
 		a, // Pass app for shutdown capability
+	)
+	settingsHandler := httpHandler.NewSettingsHandler(
+		a.setupService,
+		a.settingService,
+		a.userService,
+		getJWTSecret,
+		a.logger,
+		a.config.Security.SecretKey,
+		a.config.RootEmail,
+		a, // AppShutdowner
 	)
 	workspaceHandler := httpHandler.NewWorkspaceHandler(
 		a.workspaceService,
@@ -1156,6 +1185,7 @@ func (a *App) InitHandlers() error {
 
 	// Register routes
 	setupHandler.RegisterRoutes(a.mux) // Setup handler first (should be accessible without auth)
+	settingsHandler.RegisterRoutes(a.mux)
 	userHandler.RegisterRoutes(a.mux)
 	workspaceHandler.RegisterRoutes(a.mux)
 	rootHandler.RegisterRoutes(a.mux)
@@ -1262,12 +1292,12 @@ func (a *App) Start() error {
 		a.telemetryService.StartDailyScheduler(ctx)
 	}
 
-	// Start SMTP relay server if enabled
-	if a.smtpRelayServer != nil {
+	// Start SMTP bridge server if enabled
+	if a.smtpBridgeServer != nil {
 		go func() {
-			a.logger.Info("Starting SMTP relay server...")
-			if err := a.smtpRelayServer.Start(); err != nil {
-				a.logger.WithField("error", err.Error()).Error("SMTP relay server error")
+			a.logger.Info("Starting SMTP bridge server...")
+			if err := a.smtpBridgeServer.Start(); err != nil {
+				a.logger.WithField("error", err.Error()).Error("SMTP bridge server error")
 			}
 		}()
 	}
@@ -1395,16 +1425,16 @@ func (a *App) Shutdown(ctx context.Context) error {
 		a.rateLimiter.Stop()
 	}
 
-	// Shutdown SMTP relay server if running
-	if a.smtpRelayServer != nil {
-		a.logger.Info("Shutting down SMTP relay server...")
+	// Shutdown SMTP bridge server if running
+	if a.smtpBridgeServer != nil {
+		a.logger.Info("Shutting down SMTP bridge server...")
 		smtpShutdownCtx, smtpShutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer smtpShutdownCancel()
 
-		if err := a.smtpRelayServer.Shutdown(smtpShutdownCtx); err != nil {
-			a.logger.WithField("error", err.Error()).Error("Error shutting down SMTP relay server")
+		if err := a.smtpBridgeServer.Shutdown(smtpShutdownCtx); err != nil {
+			a.logger.WithField("error", err.Error()).Error("Error shutting down SMTP bridge server")
 		} else {
-			a.logger.Info("SMTP relay server shut down successfully")
+			a.logger.Info("SMTP bridge server shut down successfully")
 		}
 	}
 
@@ -1721,6 +1751,10 @@ func (a *App) GetEmailQueueRepository() domain.EmailQueueRepository {
 	return a.emailQueueRepo
 }
 
+func (a *App) GetTaskRepository() domain.TaskRepository {
+	return a.taskRepo
+}
+
 func (a *App) GetEmailQueueWorker() *queue.EmailQueueWorker {
 	return a.emailQueueWorker
 }
@@ -1736,6 +1770,13 @@ func (a *App) GetTransactionalNotificationService() domain.TransactionalNotifica
 // GetAutomationScheduler returns the automation scheduler instance
 func (a *App) GetAutomationScheduler() *service.AutomationScheduler {
 	return a.automationScheduler
+}
+
+// GetTaskScheduler returns the task scheduler instance.
+// Used by tests that drive the live scheduler directly, bypassing app.Start()'s
+// delayed-start goroutine.
+func (a *App) GetTaskScheduler() *service.TaskScheduler {
+	return a.taskScheduler
 }
 
 // SetHandler allows setting a custom HTTP handler

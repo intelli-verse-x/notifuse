@@ -48,6 +48,7 @@ func TestBroadcastOrchestrator_Process_PausedBroadcast(t *testing.T) {
 		mockContactRepo,
 		mockTaskRepo,
 		mockWorkspaceRepo,
+		nil, // emailQueueRepo not needed for this test
 		nil, // abTestEvaluator not needed for tests,
 		mockLogger,
 		nil, // Use default config
@@ -207,6 +208,7 @@ func TestBroadcastOrchestrator_Process_PausedDuringProcessing(t *testing.T) {
 		mockContactRepo,
 		mockTaskRepo,
 		mockWorkspaceRepo,
+		nil, // emailQueueRepo not needed for this test
 		nil, // abTestEvaluator not needed for tests,
 		mockLogger,
 		config,
@@ -354,7 +356,7 @@ func TestBroadcastOrchestrator_Process_PausedDuringProcessing(t *testing.T) {
 
 	// Mock message sender - may or may not be called before pause is detected
 	mockMessageSender.EXPECT().
-		SendBatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		SendBatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(len(mockContacts), 0, nil).
 		MaxTimes(1)
 
@@ -424,6 +426,7 @@ func TestBroadcastOrchestrator_Process_PausedVsCancelled(t *testing.T) {
 				mockContactRepo,
 				mockTaskRepo,
 				mockWorkspaceRepo,
+				nil, // emailQueueRepo not needed for this test
 				nil,
 				mockLogger,
 				nil,

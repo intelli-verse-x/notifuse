@@ -31,6 +31,8 @@ export interface BlogSettings {
   seo?: SEOSettings
   home_page_size?: number
   category_page_size?: number
+  feed_summary_only?: boolean
+  feed_max_items?: number
 }
 
 export interface WorkspaceSettings {
@@ -128,6 +130,7 @@ export interface SparkPostSettings {
 export interface PostmarkSettings {
   server_token?: string
   encrypted_server_token?: string
+  message_stream?: string
 }
 
 export interface MailgunSettings {
@@ -153,7 +156,7 @@ export interface SendGridSettings {
 export type IntegrationType = 'email' | 'sms' | 'whatsapp' | 'supabase' | 'llm' | 'firecrawl'
 
 // LLM Provider types
-export type LLMProviderKind = 'anthropic'
+export type LLMProviderKind = 'anthropic' | 'openai'
 
 export interface AnthropicSettings {
   api_key?: string
@@ -161,9 +164,17 @@ export interface AnthropicSettings {
   model: string
 }
 
+export interface OpenAISettings {
+  api_key?: string
+  encrypted_api_key?: string
+  model: string
+  base_url?: string
+}
+
 export interface LLMProvider {
   kind: LLMProviderKind
   anthropic?: AnthropicSettings
+  openai?: OpenAISettings
 }
 
 // Firecrawl settings for web scraping and search
@@ -368,6 +379,27 @@ export interface SetUserPermissionsResponse {
   message: string
 }
 
+export interface SetCustomFieldLabelsRequest {
+  workspace_id: string
+  custom_field_labels: Record<string, string>
+}
+
+export interface SetCustomFieldLabelsResponse {
+  status: string
+  message: string
+}
+
+export interface SetBlogSettingsRequest {
+  workspace_id: string
+  blog_enabled: boolean
+  blog_settings?: BlogSettings
+}
+
+export interface SetBlogSettingsResponse {
+  status: string
+  message: string
+}
+
 // Invitation types
 export interface WorkspaceInvitation {
   id: string
@@ -468,5 +500,11 @@ export const workspaceService = {
     api.post<DeleteInvitationResponse>('/api/workspaces.deleteInvitation', data),
 
   setUserPermissions: (data: SetUserPermissionsRequest) =>
-    api.post<SetUserPermissionsResponse>('/api/workspaces.setUserPermissions', data)
+    api.post<SetUserPermissionsResponse>('/api/workspaces.setUserPermissions', data),
+
+  setCustomFieldLabels: (data: SetCustomFieldLabelsRequest) =>
+    api.post<SetCustomFieldLabelsResponse>('/api/workspaces.setCustomFieldLabels', data),
+
+  setBlogSettings: (data: SetBlogSettingsRequest) =>
+    api.post<SetBlogSettingsResponse>('/api/workspaces.setBlogSettings', data)
 }

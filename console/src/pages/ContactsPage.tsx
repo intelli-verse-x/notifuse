@@ -1,9 +1,9 @@
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tanstack/react-query'
 import { Table, Tag, Button, Space, Tooltip, message, Dropdown } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import type { MenuProps } from 'antd'
 import { useParams, useSearch, useNavigate } from '@tanstack/react-router'
-import { contactsApi, type Contact, type ListContactsRequest } from '../services/api/contacts'
+import { contactsApi, type Contact } from '../services/api/contacts'
 import { listsApi } from '../services/api/list'
 import { listSegments } from '../services/api/segment'
 import React from 'react'
@@ -27,6 +27,14 @@ import {
 import { ContactDetailsDrawer } from '../components/contacts/ContactDetailsDrawer'
 import { DeleteContactModal } from '../components/contacts/DeleteContactModal'
 import { SegmentsFilter } from '../components/contacts/SegmentsFilter'
+import { BulkActionsBar } from '../components/contacts/BulkActionsBar'
+import { BulkActionProgressModal } from '../components/contacts/BulkActionProgressModal'
+import {
+  useBulkContactAction,
+  SkippedAction,
+  type BulkActionResult
+} from '../hooks/useBulkContactAction'
+import { contactListApi } from '../services/api/contact_list'
 import dayjs from '../lib/dayjs'
 import { useAuth, useWorkspacePermissions } from '../contexts/AuthContext'
 import numbro from 'numbro'
@@ -90,10 +98,6 @@ export function ContactsPage() {
   const [visibleColumns, setVisibleColumns] =
     React.useState<Record<string, boolean>>(DEFAULT_VISIBLE_COLUMNS)
 
-  // Track accumulated contacts
-  const [allContacts, setAllContacts] = React.useState<Contact[]>([])
-  // Track cursor state internally instead of in URL
-  const [currentCursor, setCurrentCursor] = React.useState<string | undefined>(undefined)
   // Delete modal state
   const [deleteModalVisible, setDeleteModalVisible] = React.useState(false)
   const [contactToDelete, setContactToDelete] = React.useState<string | null>(null)
@@ -102,6 +106,45 @@ export function ContactsPage() {
   const [contactToEdit, setContactToEdit] = React.useState<Contact | null>(null)
   // Export modal state
   const [exportModalVisible, setExportModalVisible] = React.useState(false)
+
+  // Bulk selection state
+  const [selectedEmails, setSelectedEmails] = React.useState<string[]>([])
+  const [bulkActionLabel, setBulkActionLabel] = React.useState<string>('')
+  const [showProgressModal, setShowProgressModal] = React.useState(false)
+  const bulk = useBulkContactAction()
+
+  // Track running state in a ref so the selection-clear effect can read the
+  // latest value without making `running` itself a dep (which would fire the
+  // effect on every running-transition).
+  const bulkRunningRef = React.useRef(false)
+  React.useEffect(() => {
+    bulkRunningRef.current = bulk.running
+  })
+
+  // Clear selection whenever filters/search change.
+  // - Strip `limit` so the "Load More" pagination bump does NOT clear selection.
+  // - Stringify because useSearch() returns a new reference each render.
+  // - Guarded by bulkRunningRef so an in-flight bulk op can't be orphaned.
+  const filtersKey = React.useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stripping `limit` from the key
+    const { limit, ...filters } = search
+    return JSON.stringify(filters)
+  }, [search])
+  React.useEffect(() => {
+    if (bulkRunningRef.current) return
+    setSelectedEmails([])
+  }, [filtersKey])
+
+  // Warn the user before closing the tab while a bulk action is running.
+  React.useEffect(() => {
+    if (!bulk.running) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'A bulk action is in progress. Leaving now will abort it.'
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [bulk.running])
 
   // Fetch lists for the current workspace
   const { data: listsData } = useQuery({
@@ -128,27 +171,45 @@ export function ContactsPage() {
     queryFn: () => contactsApi.getTotalContacts({ workspace_id: workspaceId })
   })
 
-  // Delete contact mutation
+  // Delete contact mutation with optimistic update
   const deleteContactMutation = useMutation({
     mutationFn: (email: string) =>
       contactsApi.delete({
         workspace_id: workspaceId,
         email: email
       }),
-    onSuccess: (_, deletedEmail) => {
+    onMutate: async (deletedEmail) => {
+      // Cancel in-flight queries so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['contacts', workspaceId, search] })
+      // Snapshot current cache for rollback
+      const previous = queryClient.getQueryData(['contacts', workspaceId, search])
+      // Optimistic update: immediately remove the contact from the table
+      queryClient.setQueryData(
+        ['contacts', workspaceId, search],
+        (old: { contacts: Contact[]; next_cursor?: string } | undefined) => {
+          if (!old) return old
+          return { ...old, contacts: old.contacts.filter((c) => c.email !== deletedEmail) }
+        }
+      )
+      return { previous }
+    },
+    onSuccess: () => {
       message.success(t`Contact deleted successfully`)
-      // Remove the deleted contact from the local state
-      setAllContacts((prev) => prev.filter((contact) => contact.email !== deletedEmail))
-      // Invalidate and refetch the contacts query to ensure data consistency
-      queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
-      // Invalidate total contacts count
-      queryClient.invalidateQueries({ queryKey: ['total-contacts', workspaceId] })
       // Close modal and reset state
       setDeleteModalVisible(false)
       setContactToDelete(null)
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      // Rollback optimistic update on failure
+      if (context?.previous) {
+        queryClient.setQueryData(['contacts', workspaceId, search], context.previous)
+      }
       message.error(error?.message || t`Failed to delete contact`)
+    },
+    onSettled: () => {
+      // Refetch for consistency regardless of success/failure
+      queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
+      queryClient.invalidateQueries({ queryKey: ['total-contacts', workspaceId] })
     }
   })
 
@@ -180,12 +241,118 @@ export function ContactsPage() {
     setContactToEdit(null)
   }
 
-  const handleContactUpdate = (updatedContact: Contact) => {
-    // Update the contact in the allContacts array
-    setAllContacts((prev) =>
-      prev.map((contact) => (contact.email === updatedContact.email ? updatedContact : contact))
-    )
+  const handleContactUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
     handleEditClose()
+  }
+
+  // Bulk action handlers — always snapshot the selection at call time so a
+  // mid-operation selection change (e.g. an optimistic cache update) can't
+  // shrink the working set.
+  const handleBulkDelete = async () => {
+    const emailsToUse = [...selectedEmails]
+    setBulkActionLabel(t`Delete contacts`)
+    setShowProgressModal(true)
+    await bulk.run(emailsToUse, async (email) => {
+      await contactsApi.delete({ workspace_id: workspaceId, email })
+    })
+    queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
+    queryClient.invalidateQueries({ queryKey: ['total-contacts', workspaceId] })
+  }
+
+  const handleBulkAddToList = async (listId: string) => {
+    const emailsToUse = [...selectedEmails]
+    setBulkActionLabel(t`Add to list`)
+    setShowProgressModal(true)
+    await bulk.runBatch(emailsToUse, async (emails) => {
+      const response = await contactsApi.batchImport({
+        workspace_id: workspaceId,
+        contacts: emails.map((email) => ({ email })),
+        subscribe_to_lists: [listId]
+      })
+      if (response.error) {
+        return emails.map((email) => ({ email, success: false, error: response.error }))
+      }
+      const resultMap = new Map<string, BulkActionResult>()
+      for (const op of response.operations || []) {
+        if (!op.email) continue
+        resultMap.set(op.email, {
+          email: op.email,
+          success: op.action === 'create' || op.action === 'update',
+          error: op.action === 'error' ? op.error : undefined
+        })
+      }
+      // If the server omits an email from operations[], treat it as a failure
+      // rather than an assumed success — prevents silent data loss if the
+      // backend truncates or drops rows.
+      return emails.map(
+        (email) =>
+          resultMap.get(email) || {
+            email,
+            success: false,
+            error: 'Not acknowledged by server'
+          }
+      )
+    })
+    queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
+    queryClient.invalidateQueries({ queryKey: ['lists', workspaceId] })
+    queryClient.invalidateQueries({ queryKey: ['total-contacts', workspaceId] })
+  }
+
+  const handleBulkRemoveFromList = async (listId: string) => {
+    const emailsToUse = [...selectedEmails]
+    setBulkActionLabel(t`Remove from list`)
+    setShowProgressModal(true)
+    await bulk.run(emailsToUse, async (email) => {
+      try {
+        await contactListApi.removeContact({
+          workspace_id: workspaceId,
+          email,
+          list_id: listId
+        })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : ''
+        if (msg.includes('contact list not found')) {
+          throw new SkippedAction('Not in list')
+        }
+        throw err
+      }
+    })
+    queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
+  }
+
+  const handleBulkUnsubscribe = async (listId: string) => {
+    const emailsToUse = [...selectedEmails]
+    setBulkActionLabel(t`Unsubscribe from list`)
+    setShowProgressModal(true)
+    await bulk.run(emailsToUse, async (email) => {
+      const response = await contactListApi.updateStatus({
+        workspace_id: workspaceId,
+        email,
+        list_id: listId,
+        status: 'unsubscribed'
+      })
+      // Backend silently no-ops when the contact is not in the list. Surface
+      // this to the user as "Skipped" rather than misleading "Success".
+      if (response.found === false) {
+        throw new SkippedAction('Not in list')
+      }
+    })
+    queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
+  }
+
+  const handleProgressModalClose = () => {
+    // Defensive: today the modal is non-closable while running, so this path
+    // is unreachable mid-run. But if those guards are ever relaxed, make sure
+    // we don't orphan the loop — cancel first, then the next iteration of the
+    // loop will observe `cancelledRef` and exit; the finally block will
+    // release `busyRef` and reset will succeed on a later close.
+    if (bulk.running) {
+      bulk.cancel()
+    }
+    setShowProgressModal(false)
+    setSelectedEmails([])
+    bulk.reset()
   }
 
   const filterFields: FilterField[] = React.useMemo(() => [
@@ -284,7 +451,6 @@ export function ContactsPage() {
         ([key, value]) =>
           key !== 'segments' && // Exclude segments as they are shown separately
           key !== 'limit' && // Exclude limit as it's a pagination param
-          key !== 'cursor' && // Exclude cursor as it's a pagination param
           filterFields.some((field) => field.key === key) &&
           value !== undefined &&
           value !== ''
@@ -299,103 +465,56 @@ export function ContactsPage() {
       })
   }, [search, filterFields])
 
-  // Force data refresh on mount
-  React.useEffect(() => {
-    // Reset the query on mount to force a refetch
-    queryClient.resetQueries({ queryKey: ['contacts', workspaceId] })
+  const pageSize = 10
+  const API_MAX_LIMIT = 100
 
-    // Cleanup function to reset state when component unmounts
-    return () => {
-      setAllContacts([])
-      setCurrentCursor(undefined)
-    }
-  }, [workspaceId, queryClient])
+  const MAX_CONTACTS = 10000
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['contacts', workspaceId, { ...search, cursor: currentCursor }],
-    queryFn: async () => {
-      const request: ListContactsRequest = {
-        workspace_id: workspaceId,
-        cursor: currentCursor,
-        limit: search.limit || 10,
-        email: search.email,
-        external_id: search.external_id,
-        first_name: search.first_name,
-        last_name: search.last_name,
-        full_name: search.full_name,
-        phone: search.phone,
-        country: search.country,
-        language: search.language,
-        list_id: search.list_id,
-        contact_list_status: search.contact_list_status,
-        segments: search.segments,
-        with_contact_lists: true
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['contacts', workspaceId, search],
+    queryFn: async ({ signal }) => {
+      const targetCount = Math.min(search.limit || pageSize, MAX_CONTACTS)
+      const allContacts: Contact[] = []
+      let cursor: string | undefined = undefined
+
+      // Fetch pages until we reach the target count or run out of data
+      while (allContacts.length < targetCount) {
+        if (signal?.aborted) break
+        const batchSize = Math.min(API_MAX_LIMIT, targetCount - allContacts.length)
+        const response = await contactsApi.list({
+          workspace_id: workspaceId,
+          cursor,
+          limit: batchSize,
+          email: search.email,
+          external_id: search.external_id,
+          first_name: search.first_name,
+          last_name: search.last_name,
+          full_name: search.full_name,
+          phone: search.phone,
+          country: search.country,
+          language: search.language,
+          list_id: search.list_id,
+          contact_list_status: search.contact_list_status,
+          segments: search.segments,
+          with_contact_lists: true
+        })
+        allContacts.push(...(response.contacts || []))
+        cursor = response.next_cursor
+        if (!cursor) break
       }
-      return contactsApi.list(request)
+
+      return { contacts: allContacts, next_cursor: cursor }
     },
-    // Reduce staleTime to make filter changes more responsive
     staleTime: 5000,
     refetchOnMount: true,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData
   })
 
-  // Update allContacts when data changes - modified to handle first load correctly
-  React.useEffect(() => {
-    // If data is still loading or not available, don't update
-    if (isLoading || !data) return
-
-    // If we have data
-    if (data.contacts) {
-      if (!currentCursor) {
-        // Initial load or filter change - replace all contacts
-        setAllContacts(data.contacts)
-      } else if (data.contacts.length > 0) {
-        // If we have a cursor and new contacts, append them
-        setAllContacts((prev) => [...prev, ...data.contacts])
-      }
-    }
-  }, [data, currentCursor, isLoading])
-
-  // Reset contacts and cursor when filters change, and trigger a refetch
-  React.useEffect(() => {
-    // Reset accumulated contacts and cursor when search params change
-    setAllContacts([])
-    setCurrentCursor(undefined)
-
-    // Reset the entire query to force a fresh fetch
-    queryClient.resetQueries({ queryKey: ['contacts', workspaceId] })
-
-    // Schedule a refetch (give time for the UI to update first)
-    setTimeout(() => {
-      refetch()
-    }, 0)
-  }, [
-    search.email,
-    search.external_id,
-    search.first_name,
-    search.last_name,
-    search.full_name,
-    search.phone,
-    search.country,
-    search.language,
-    search.list_id,
-    search.contact_list_status,
-    search.segments,
-    search.limit,
-    refetch,
-    queryClient,
-    workspaceId
-  ])
-
   const handleRefresh = () => {
-    // Reset accumulated contacts and cursor
-    setAllContacts([])
-    setCurrentCursor(undefined)
-    // Reset and refetch the query
-    queryClient.resetQueries({ queryKey: ['contacts', workspaceId] })
+    queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
     queryClient.invalidateQueries({ queryKey: ['lists', workspaceId] })
     queryClient.invalidateQueries({ queryKey: ['total-contacts', workspaceId] })
-    refetch()
   }
 
   if (!currentWorkspace) {
@@ -408,12 +527,8 @@ export function ContactsPage() {
       dataIndex: 'email',
       key: 'email',
       fixed: 'left' as const,
-      onHeaderCell: () => ({
-        style: { backgroundColor: '#F9F9F9' }
-      }),
-      onCell: () => ({
-        style: { backgroundColor: '#F9F9F9' }
-      })
+      onHeaderCell: () => ({ className: 'contacts-fixed-col' }),
+      onCell: () => ({ className: 'contacts-fixed-col' })
     },
     {
       title: t`Lists`,
@@ -804,12 +919,8 @@ export function ContactsPage() {
       width: 120,
       fixed: 'right' as const,
       align: 'right' as const,
-      onHeaderCell: () => ({
-        style: { backgroundColor: '#F9F9F9' }
-      }),
-      onCell: () => ({
-        style: { backgroundColor: '#F9F9F9' }
-      }),
+      onHeaderCell: () => ({ className: 'contacts-fixed-col' }),
+      onCell: () => ({ className: 'contacts-fixed-col' }),
       render: (_: unknown, record: Contact) => {
         const menuItems: MenuProps['items'] = [
           {
@@ -837,13 +948,8 @@ export function ContactsPage() {
               lists={listsData?.lists || []}
               segments={segmentsData?.segments || []}
               key={record.email}
-              onContactUpdate={(updatedContact) => {
-                // Update the contact in the allContacts array
-                setAllContacts((prev) =>
-                  prev.map((contact) =>
-                    contact.email === updatedContact.email ? updatedContact : contact
-                  )
-                )
+              onContactUpdate={() => {
+                queryClient.invalidateQueries({ queryKey: ['contacts', workspaceId] })
               }}
               buttonProps={{
                 icon: <FontAwesomeIcon icon={faEye} />,
@@ -858,16 +964,21 @@ export function ContactsPage() {
 
   const handleLoadMore = () => {
     if (data?.next_cursor) {
-      setCurrentCursor(data.next_cursor)
+      navigate({
+        to: workspaceContactsRoute.to,
+        params: { workspaceId },
+        search: {
+          ...search,
+          limit: (search.limit || pageSize) + pageSize
+        }
+      })
     }
   }
 
+  const contacts = data?.contacts || []
+
   // Show empty state when there's no data and no loading
-  const showEmptyState =
-    !isLoading &&
-    !isFetching &&
-    (!data?.contacts || data.contacts.length === 0) &&
-    allContacts.length === 0
+  const showEmptyState = !isLoading && !isFetching && contacts.length === 0
 
   return (
     <div className="p-6">
@@ -972,21 +1083,63 @@ export function ContactsPage() {
             params: { workspaceId },
             search: {
               ...search,
-              segments: newSegments.length > 0 ? newSegments : undefined
+              segments: newSegments.length > 0 ? newSegments : undefined,
+              limit: undefined // Reset pagination when filters change
             }
           })
         }}
       />
 
+      {/* Bulk actions bar — appears when rows are selected */}
+      <BulkActionsBar
+        selectedCount={selectedEmails.length}
+        lists={listsData?.lists || []}
+        canWriteContacts={!!permissions?.contacts?.write}
+        canWriteLists={!!permissions?.lists?.write}
+        disabled={bulk.running}
+        onAddToList={handleBulkAddToList}
+        onRemoveFromList={handleBulkRemoveFromList}
+        onUnsubscribeFromList={handleBulkUnsubscribe}
+        onDelete={handleBulkDelete}
+        onClear={() => setSelectedEmails([])}
+      />
+
       {/* Contacts Table */}
       <Table
         columns={columns}
-        dataSource={allContacts}
+        dataSource={contacts}
         rowKey={(record) => record.email}
-        loading={isLoading || isFetching}
+        loading={isLoading}
         pagination={false}
         scroll={{ x: 'max-content' }}
         style={{ minWidth: 800 }}
+        rowSelection={{
+          selectedRowKeys: selectedEmails,
+          onChange: (keys) => setSelectedEmails(keys as string[]),
+          getCheckboxProps: () => ({
+            disabled: !permissions?.contacts?.write
+          })
+        }}
+        onRow={(record) => ({
+          onClick: (e) => {
+            if (!permissions?.contacts?.write) return
+            // Ignore clicks inside the selection column (checkbox handles itself)
+            // or the fixed-right actions column (dropdown + detail drawer).
+            const target = e.target as HTMLElement
+            if (
+              target.closest(
+                '.ant-table-selection-column, .ant-table-cell-fix-right'
+              )
+            )
+              return
+            setSelectedEmails((prev) =>
+              prev.includes(record.email)
+                ? prev.filter((email) => email !== record.email)
+                : [...prev, record.email]
+            )
+          },
+          style: permissions?.contacts?.write ? { cursor: 'pointer' } : undefined
+        })}
         locale={{
           emptyText: showEmptyState
             ? t`No contacts found. Add some contacts to get started.`
@@ -1030,6 +1183,16 @@ export function ContactsPage() {
         filters={search}
         segmentsData={segmentsData?.segments || []}
         listsData={listsData?.lists || []}
+      />
+
+      <BulkActionProgressModal
+        open={showProgressModal}
+        title={bulkActionLabel}
+        progress={bulk.progress}
+        onPause={bulk.pause}
+        onResume={bulk.resume}
+        onCancel={bulk.cancel}
+        onClose={handleProgressModalClose}
       />
     </div>
   )

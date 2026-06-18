@@ -373,7 +373,7 @@ type GetContactsRequest struct {
 	WorkspaceID string `json:"workspace_id" valid:"required,alphanum,stringlength(1|20)"`
 
 	// Optional filters
-	Email             string   `json:"email,omitempty" valid:"optional,email"`
+	Email             string   `json:"email,omitempty" valid:"optional"`
 	ExternalID        string   `json:"external_id,omitempty" valid:"optional"`
 	FirstName         string   `json:"first_name,omitempty" valid:"optional"`
 	LastName          string   `json:"last_name,omitempty" valid:"optional"`
@@ -437,13 +437,6 @@ func (r *GetContactsRequest) FromQueryParams(params url.Values) error {
 			return fmt.Errorf("invalid with_contact_lists: %w", err)
 		}
 		r.WithContactLists = withContactLists
-	}
-
-	// Validate email format if provided
-	if r.Email != "" {
-		if !govalidator.IsEmail(r.Email) {
-			return fmt.Errorf("invalid email format")
-		}
 	}
 
 	return nil
@@ -648,6 +641,12 @@ type ContactRepository interface {
 
 	// GetBatchForSegment retrieves a batch of email addresses for segment processing
 	GetBatchForSegment(ctx context.Context, workspaceID string, offset int64, limit int) ([]string, error)
+
+	// MarkEmailsAsBounced flips contact_lists.status to 'bounced' for every list
+	// each given email is on, except where the row is already 'bounced' or
+	// 'complained', or has been soft-deleted. The track_contact_list_changes
+	// trigger emits the corresponding list.bounced timeline rows.
+	MarkEmailsAsBounced(ctx context.Context, workspaceID string, emails []string, at time.Time) error
 }
 
 // FromJSON parses JSON data into a Contact struct

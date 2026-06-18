@@ -71,7 +71,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { SettingsSectionHeader } from './SettingsSectionHeader'
 
 // Provider types that only support transactional emails, not marketing emails
-const transactionalEmailOnly: EmailProviderKind[] = ['postmark']
+const transactionalEmailOnly: EmailProviderKind[] = []
 
 // Helper function to generate Supabase webhook URLs
 const generateSupabaseWebhookURL = (
@@ -608,7 +608,12 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
       ses: integration.email_provider.ses,
       smtp: integration.email_provider.smtp,
       sparkpost: integration.email_provider.sparkpost,
-      postmark: integration.email_provider.postmark,
+      postmark: integration.email_provider.postmark
+        ? {
+            ...integration.email_provider.postmark,
+            message_stream: integration.email_provider.postmark.message_stream || 'outbound'
+          }
+        : undefined,
       mailgun: integration.email_provider.mailgun,
       mailjet: integration.email_provider.mailjet,
       sendgrid: integration.email_provider.sendgrid
@@ -1358,9 +1363,18 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
                     <Descriptions.Item label={t`Name`}>{integration.name}</Descriptions.Item>
                     <Descriptions.Item label={t`Model`}>
                       <Tag bordered={false} color="purple">
-                        {provider.anthropic?.model || 'Not configured'}
+                        {provider.kind === 'openai'
+                          ? provider.openai?.model || 'Not configured'
+                          : provider.anthropic?.model || 'Not configured'}
                       </Tag>
                     </Descriptions.Item>
+                    {provider.kind === 'openai' && provider.openai?.base_url && (
+                      <Descriptions.Item label={t`Base URL`}>
+                        <Tag bordered={false} color="blue">
+                          {provider.openai.base_url}
+                        </Tag>
+                      </Descriptions.Item>
+                    )}
                     <Descriptions.Item label={t`API Key`}>
                       <Tag bordered={false} color="green">
                         <FontAwesomeIcon icon={faCheck} className="mr-1" /> {t`Configured`}
@@ -1461,8 +1475,14 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
                 <Select.Option value="us-west-1">US West (N. California) - us-west-1</Select.Option>
                 <Select.Option value="us-west-2">US West (Oregon) - us-west-2</Select.Option>
                 <Select.Option value="af-south-1">Africa (Cape Town) - af-south-1</Select.Option>
+                <Select.Option value="ap-south-2">
+                  Asia Pacific (Hyderabad) - ap-south-2
+                </Select.Option>
                 <Select.Option value="ap-southeast-3">
                   Asia Pacific (Jakarta) - ap-southeast-3
+                </Select.Option>
+                <Select.Option value="ap-southeast-5">
+                  Asia Pacific (Malaysia) - ap-southeast-5
                 </Select.Option>
                 <Select.Option value="ap-south-1">Asia Pacific (Mumbai) - ap-south-1</Select.Option>
                 <Select.Option value="ap-northeast-3">
@@ -1481,9 +1501,11 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
                   Asia Pacific (Tokyo) - ap-northeast-1
                 </Select.Option>
                 <Select.Option value="ca-central-1">Canada (Central) - ca-central-1</Select.Option>
+                <Select.Option value="ca-west-1">Canada West (Calgary) - ca-west-1</Select.Option>
                 <Select.Option value="eu-central-1">
                   Europe (Frankfurt) - eu-central-1
                 </Select.Option>
+                <Select.Option value="eu-central-2">Europe (Zurich) - eu-central-2</Select.Option>
                 <Select.Option value="eu-west-1">Europe (Ireland) - eu-west-1</Select.Option>
                 <Select.Option value="eu-west-2">Europe (London) - eu-west-2</Select.Option>
                 <Select.Option value="eu-south-1">Europe (Milan) - eu-south-1</Select.Option>
@@ -1491,6 +1513,7 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
                 <Select.Option value="eu-north-1">Europe (Stockholm) - eu-north-1</Select.Option>
                 <Select.Option value="il-central-1">Israel (Tel Aviv) - il-central-1</Select.Option>
                 <Select.Option value="me-south-1">Middle East (Bahrain) - me-south-1</Select.Option>
+                <Select.Option value="me-central-1">Middle East (UAE) - me-central-1</Select.Option>
                 <Select.Option value="sa-east-1">
                   South America (São Paulo) - sa-east-1
                 </Select.Option>
@@ -1742,13 +1765,23 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
         )}
 
         {providerType === 'postmark' && (
-          <Form.Item
-            name={['postmark', 'server_token']}
-            label={t`Server Token`}
-            rules={[{ required: true }]}
-          >
-            <Input.Password placeholder="Server Token" disabled={!isOwner} />
-          </Form.Item>
+          <>
+            <Form.Item
+              name={['postmark', 'server_token']}
+              label={t`Server Token`}
+              rules={[{ required: true }]}
+            >
+              <Input.Password placeholder="Server Token" disabled={!isOwner} />
+            </Form.Item>
+            <Form.Item
+              name={['postmark', 'message_stream']}
+              label={t`Message Stream`}
+              initialValue="outbound"
+              extra={t`Postmark Message Stream ID (e.g. "outbound" for transactional, "broadcast" for marketing)`}
+            >
+              <Input placeholder="outbound" disabled={!isOwner} />
+            </Form.Item>
+          </>
         )}
 
         {providerType === 'mailgun' && (
@@ -1973,6 +2006,12 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
         </Descriptions.Item>,
         <Descriptions.Item key="region" label={t`Region`}>
           {provider.mailgun.region || 'US'}
+        </Descriptions.Item>
+      )
+    } else if (provider.kind === 'postmark' && provider.postmark) {
+      items.push(
+        <Descriptions.Item key="message_stream" label={t`Message Stream`}>
+          {provider.postmark.message_stream || 'outbound'}
         </Descriptions.Item>
       )
     } else if (provider.kind === 'mailjet' && provider.mailjet) {

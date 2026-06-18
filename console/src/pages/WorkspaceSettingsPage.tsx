@@ -6,7 +6,7 @@ import { workspaceService } from '../services/api/workspace'
 import { Workspace, WorkspaceMember } from '../services/api/types'
 import { WorkspaceMembers } from '../components/settings/WorkspaceMembers'
 import { GeneralSettings } from '../components/settings/GeneralSettings'
-import { SMTPRelaySettings } from '../components/settings/SMTPRelaySettings'
+import { SMTPBridgeSettings } from '../components/settings/SMTPBridgeSettings'
 import { Integrations } from '../components/settings/Integrations'
 import { CustomFieldsConfiguration } from '../components/settings/CustomFieldsConfiguration'
 import { BlogSettings } from '../components/settings/BlogSettings'
@@ -26,6 +26,8 @@ export function WorkspaceSettingsPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
+  const [canManageCustomFields, setCanManageCustomFields] = useState(false)
+  const [canManageBlog, setCanManageBlog] = useState(false)
   const { refreshWorkspaces, user, workspaces } = useAuth()
   const navigate = useNavigate()
 
@@ -35,7 +37,7 @@ export function WorkspaceSettingsPage() {
     'integrations',
     'webhooks',
     'custom-fields',
-    'smtp-relay',
+    'smtp-bridge',
     'general',
     'blog',
     'danger-zone'
@@ -77,6 +79,18 @@ export function WorkspaceSettingsPage() {
       if (user) {
         const currentUserMember = response.members.find((member) => member.user_id === user.id)
         setIsOwner(currentUserMember?.role === 'owner')
+        // Custom fields can be managed by owners or members with workspace:write permission
+        // (mirrors the backend HasPermission(workspace, write) check).
+        setCanManageCustomFields(
+          currentUserMember?.role === 'owner' ||
+            currentUserMember?.permissions?.workspace?.write === true
+        )
+        // Blog settings can be managed by owners or members with blog:write permission
+        // (mirrors the backend HasPermission(blog, write) check).
+        setCanManageBlog(
+          currentUserMember?.role === 'owner' ||
+            currentUserMember?.permissions?.blog?.write === true
+        )
       }
     } catch (error) {
       console.error(t`Failed to fetch workspace members`, error)
@@ -131,11 +145,11 @@ export function WorkspaceSettingsPage() {
           <CustomFieldsConfiguration
             workspace={workspace}
             onWorkspaceUpdate={handleWorkspaceUpdate}
-            isOwner={isOwner}
+            canManage={canManageCustomFields}
           />
         )
-      case 'smtp-relay':
-        return <SMTPRelaySettings />
+      case 'smtp-bridge':
+        return <SMTPBridgeSettings />
       case 'general':
         return (
           <GeneralSettings
@@ -149,7 +163,7 @@ export function WorkspaceSettingsPage() {
           <BlogSettings
             workspace={workspace}
             onWorkspaceUpdate={handleWorkspaceUpdate}
-            isOwner={isOwner}
+            canManage={canManageBlog}
           />
         )
       case 'danger-zone':

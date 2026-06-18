@@ -885,7 +885,9 @@ func (r *RefreshGlobalFeedRequest) Validate() error {
 		return fmt.Errorf("url is required")
 	}
 
-	// Basic URL format check (no SSRF protection needed for test endpoint)
+	// Basic URL format check. SSRF protection (blocking private/loopback/link-local
+	// targets and re-validating redirects) is enforced at fetch time by the data-feed
+	// HTTP client; see broadcast.NewDataFeedFetcher and pkg/safehttpclient.
 	parsedURL, err := url.Parse(r.URL)
 	if err != nil {
 		return fmt.Errorf("url: invalid URL: %s", err.Error())
@@ -946,7 +948,9 @@ func (r *TestRecipientFeedRequest) Validate() error {
 		return fmt.Errorf("url is required")
 	}
 
-	// Basic URL format check (no SSRF protection needed for test endpoint)
+	// Basic URL format check. SSRF protection (blocking private/loopback/link-local
+	// targets and re-validating redirects) is enforced at fetch time by the data-feed
+	// HTTP client; see broadcast.NewDataFeedFetcher and pkg/safehttpclient.
 	parsedURL, err := url.Parse(r.URL)
 	if err != nil {
 		return fmt.Errorf("url: invalid URL: %s", err.Error())
@@ -1048,6 +1052,12 @@ type BroadcastRepository interface {
 	CreateBroadcastTx(ctx context.Context, tx *sql.Tx, broadcast *Broadcast) error
 	GetBroadcastTx(ctx context.Context, tx *sql.Tx, workspaceID, broadcastID string) (*Broadcast, error)
 	UpdateBroadcastTx(ctx context.Context, tx *sql.Tx, broadcast *Broadcast) error
+	// UpdateBroadcastStatusTx updates only status-lifecycle fields (status,
+	// timestamps, pause_reason). Unlike UpdateBroadcastTx, it does not reject
+	// already-terminal states — used by pause/resume/cancel flows that need to
+	// transition a Processed broadcast. The service layer enforces allowed
+	// transitions.
+	UpdateBroadcastStatusTx(ctx context.Context, tx *sql.Tx, broadcast *Broadcast) error
 	DeleteBroadcastTx(ctx context.Context, tx *sql.Tx, workspaceID, broadcastID string) error
 	ListBroadcastsTx(ctx context.Context, tx *sql.Tx, params ListBroadcastsParams) (*BroadcastListResponse, error)
 }

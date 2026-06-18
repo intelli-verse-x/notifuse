@@ -671,6 +671,448 @@ func TestWorkspaceService_CreateWorkspace_DefaultLanguageNotInList(t *testing.T)
 	assert.Contains(t, err.Error(), "default language fr must be in the languages list")
 }
 
+func TestWorkspaceService_SetCustomFieldLabels(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockWorkspaceRepository(ctrl)
+	mockUserRepo := mocks.NewMockUserRepository(ctrl)
+	mockLogger := pkgmocks.NewMockLogger(ctrl)
+	mockUserService := mocks.NewMockUserServiceInterface(ctrl)
+	mockAuthService := mocks.NewMockAuthService(ctrl)
+	mockMailer := pkgmocks.NewMockMailer(ctrl)
+	mockConfig := &config.Config{RootEmail: "test@example.com"}
+	mockContactService := mocks.NewMockContactService(ctrl)
+	mockListService := mocks.NewMockListService(ctrl)
+	mockContactListService := mocks.NewMockContactListService(ctrl)
+	mockTemplateService := mocks.NewMockTemplateService(ctrl)
+	mockWebhookRegService := mocks.NewMockWebhookRegistrationService(ctrl)
+
+	service := NewWorkspaceService(
+		mockRepo,
+		mockUserRepo,
+		mocks.NewMockTaskRepository(ctrl),
+		mockLogger,
+		mockUserService,
+		mockAuthService,
+		mockMailer,
+		mockConfig,
+		mockContactService,
+		mockListService,
+		mockContactListService,
+		mockTemplateService,
+		mockWebhookRegService,
+		"secret_key",
+		&SupabaseService{},
+		&DNSVerificationService{},
+		&BlogService{},
+	)
+
+	mockLogger.EXPECT().WithField(gomock.Any(), gomock.Any()).Return(mockLogger).AnyTimes()
+	mockLogger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	ctx := context.Background()
+	workspaceID := "testworkspace"
+	userID := "testuser"
+	labels := map[string]string{
+		"custom_string_1": "Company Name",
+		"custom_number_1": "Revenue",
+	}
+
+	t.Run("owner can set labels", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, ws *domain.Workspace) error {
+			assert.Equal(t, labels, ws.Settings.CustomFieldLabels)
+			return nil
+		})
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.NoError(t, err)
+	})
+
+	t.Run("member with workspace write can set labels", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.UserPermissions{
+				domain.PermissionResourceWorkspace: {Read: true, Write: true},
+			},
+		}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, ws *domain.Workspace) error {
+			assert.Equal(t, labels, ws.Settings.CustomFieldLabels)
+			return nil
+		})
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.NoError(t, err)
+	})
+
+	t.Run("member with full permissions can set labels", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.FullPermissions,
+		}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.NoError(t, err)
+	})
+
+	t.Run("member with workspace read only is denied", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.UserPermissions{
+				domain.PermissionResourceWorkspace: {Read: true, Write: false},
+			},
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+		// No GetByID / Update expected.
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.Error(t, err)
+		var permErr *domain.PermissionError
+		assert.ErrorAs(t, err, &permErr)
+	})
+
+	t.Run("member with nil permissions is denied", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: nil,
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.Error(t, err)
+		var permErr *domain.PermissionError
+		assert.ErrorAs(t, err, &permErr)
+	})
+
+	t.Run("authentication failure returns error", func(t *testing.T) {
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, nil, nil, assert.AnError)
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.Error(t, err)
+	})
+
+	t.Run("get workspace error is propagated", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(nil, assert.AnError)
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.Error(t, err)
+	})
+
+	t.Run("update error is propagated", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(assert.AnError)
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, labels)
+		require.Error(t, err)
+	})
+
+	t.Run("invalid label is rejected before update", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		// No Update expected — validation fails first.
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, map[string]string{"custom_string_99": "Bad"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid custom field key")
+	})
+
+	t.Run("empty labels clears all and preserves other settings", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{
+			ID:   workspaceID,
+			Name: "WS",
+			Settings: domain.WorkspaceSettings{
+				WebsiteURL:        "https://example.com",
+				Timezone:          "Europe/Paris",
+				DefaultLanguage:   "en",
+				FileManager:       domain.FileManagerSettings{Bucket: "my-bucket", AccessKey: "AKIA"},
+				CustomFieldLabels: map[string]string{"custom_string_1": "Old"},
+			},
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, ws *domain.Workspace) error {
+			// Labels cleared
+			assert.Empty(t, ws.Settings.CustomFieldLabels)
+			// Other settings preserved untouched
+			assert.Equal(t, "https://example.com", ws.Settings.WebsiteURL)
+			assert.Equal(t, "Europe/Paris", ws.Settings.Timezone)
+			assert.Equal(t, "my-bucket", ws.Settings.FileManager.Bucket)
+			assert.Equal(t, "AKIA", ws.Settings.FileManager.AccessKey)
+			return nil
+		})
+
+		err := service.SetCustomFieldLabels(ctx, workspaceID, map[string]string{})
+		require.NoError(t, err)
+	})
+}
+
+func TestWorkspaceService_SetBlogSettings(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockWorkspaceRepository(ctrl)
+	mockUserRepo := mocks.NewMockUserRepository(ctrl)
+	mockLogger := pkgmocks.NewMockLogger(ctrl)
+	mockUserService := mocks.NewMockUserServiceInterface(ctrl)
+	mockAuthService := mocks.NewMockAuthService(ctrl)
+	mockMailer := pkgmocks.NewMockMailer(ctrl)
+	mockConfig := &config.Config{RootEmail: "test@example.com"}
+	mockContactService := mocks.NewMockContactService(ctrl)
+	mockListService := mocks.NewMockListService(ctrl)
+	mockContactListService := mocks.NewMockContactListService(ctrl)
+	mockTemplateService := mocks.NewMockTemplateService(ctrl)
+	mockWebhookRegService := mocks.NewMockWebhookRegistrationService(ctrl)
+
+	service := NewWorkspaceService(
+		mockRepo,
+		mockUserRepo,
+		mocks.NewMockTaskRepository(ctrl),
+		mockLogger,
+		mockUserService,
+		mockAuthService,
+		mockMailer,
+		mockConfig,
+		mockContactService,
+		mockListService,
+		mockContactListService,
+		mockTemplateService,
+		mockWebhookRegService,
+		"secret_key",
+		&SupabaseService{},
+		&DNSVerificationService{},
+		&BlogService{},
+	)
+
+	mockLogger.EXPECT().WithField(gomock.Any(), gomock.Any()).Return(mockLogger).AnyTimes()
+	mockLogger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	ctx := context.Background()
+	workspaceID := "testworkspace"
+	userID := "testuser"
+	settings := &domain.BlogSettings{Title: "My Blog", HomePageSize: 10}
+
+	t.Run("owner can set blog settings", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, ws *domain.Workspace) error {
+			assert.True(t, ws.Settings.BlogEnabled)
+			assert.Equal(t, settings, ws.Settings.BlogSettings)
+			return nil
+		})
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.NoError(t, err)
+	})
+
+	t.Run("member with blog write can set blog settings (the fix)", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.UserPermissions{
+				domain.PermissionResourceBlog: {Read: true, Write: true},
+			},
+		}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, ws *domain.Workspace) error {
+			assert.True(t, ws.Settings.BlogEnabled)
+			assert.Equal(t, settings, ws.Settings.BlogSettings)
+			return nil
+		})
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.NoError(t, err)
+	})
+
+	t.Run("member with full permissions can set blog settings", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.FullPermissions,
+		}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.NoError(t, err)
+	})
+
+	t.Run("member with blog read only is denied", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.UserPermissions{
+				domain.PermissionResourceBlog: {Read: true, Write: false},
+			},
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+		// No GetByID / Update expected.
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.Error(t, err)
+		var permErr *domain.PermissionError
+		assert.ErrorAs(t, err, &permErr)
+	})
+
+	t.Run("member with only contacts permission is denied", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: domain.UserPermissions{
+				domain.PermissionResourceContacts: {Read: true, Write: true},
+			},
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.Error(t, err)
+		var permErr *domain.PermissionError
+		assert.ErrorAs(t, err, &permErr)
+	})
+
+	t.Run("member with nil permissions is denied", func(t *testing.T) {
+		memberWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "member",
+			Permissions: nil,
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, memberWorkspace, nil)
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.Error(t, err)
+		var permErr *domain.PermissionError
+		assert.ErrorAs(t, err, &permErr)
+	})
+
+	t.Run("authentication failure returns error", func(t *testing.T) {
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, nil, nil, assert.AnError)
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.Error(t, err)
+	})
+
+	t.Run("get workspace error is propagated", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(nil, assert.AnError)
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.Error(t, err)
+	})
+
+	t.Run("update error is propagated", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(assert.AnError)
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, settings)
+		require.Error(t, err)
+	})
+
+	t.Run("invalid settings rejected before update", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{ID: workspaceID, Name: "WS", Settings: domain.WorkspaceSettings{Timezone: "UTC"}}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		// No Update expected — validation fails first.
+
+		err := service.SetBlogSettings(ctx, workspaceID, true, &domain.BlogSettings{HomePageSize: 999})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "home_page_size must be between 1 and 100")
+	})
+
+	t.Run("disable clears blog settings and preserves other settings", func(t *testing.T) {
+		ownerWorkspace := &domain.UserWorkspace{UserID: userID, WorkspaceID: workspaceID, Role: "owner"}
+		existing := &domain.Workspace{
+			ID:   workspaceID,
+			Name: "WS",
+			Settings: domain.WorkspaceSettings{
+				WebsiteURL:        "https://example.com",
+				Timezone:          "Europe/Paris",
+				DefaultLanguage:   "en",
+				FileManager:       domain.FileManagerSettings{Bucket: "my-bucket", AccessKey: "AKIA"},
+				CustomFieldLabels: map[string]string{"custom_string_1": "Keep Me"},
+				BlogEnabled:       true,
+				BlogSettings:      &domain.BlogSettings{Title: "Old Blog"},
+			},
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, &domain.User{ID: userID}, ownerWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existing, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, ws *domain.Workspace) error {
+			// Blog disabled and cleared.
+			assert.False(t, ws.Settings.BlogEnabled)
+			assert.Nil(t, ws.Settings.BlogSettings)
+			// Other settings preserved untouched.
+			assert.Equal(t, "https://example.com", ws.Settings.WebsiteURL)
+			assert.Equal(t, "Europe/Paris", ws.Settings.Timezone)
+			assert.Equal(t, "my-bucket", ws.Settings.FileManager.Bucket)
+			assert.Equal(t, map[string]string{"custom_string_1": "Keep Me"}, ws.Settings.CustomFieldLabels)
+			return nil
+		})
+
+		err := service.SetBlogSettings(ctx, workspaceID, false, nil)
+		require.NoError(t, err)
+	})
+}
+
 func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -728,10 +1170,10 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 		}
 
 		settings := domain.WorkspaceSettings{
-			WebsiteURL: "https://example.com",
-			LogoURL:    "https://example.com/logo.png",
-			CoverURL:   "https://example.com/cover.png",
-			Timezone:   "UTC",
+			WebsiteURL:      "https://example.com",
+			LogoURL:         "https://example.com/logo.png",
+			CoverURL:        "https://example.com/cover.png",
+			Timezone:        "UTC",
 			DefaultLanguage: "en",
 			Languages:       []string{"en"},
 			FileManager: domain.FileManagerSettings{
@@ -775,10 +1217,10 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, nil, nil, assert.AnError)
 
 		settings := domain.WorkspaceSettings{
-			WebsiteURL: "https://example.com",
-			LogoURL:    "https://example.com/logo.png",
-			CoverURL:   "https://example.com/cover.png",
-			Timezone:   "UTC",
+			WebsiteURL:      "https://example.com",
+			LogoURL:         "https://example.com/logo.png",
+			CoverURL:        "https://example.com/cover.png",
+			Timezone:        "UTC",
 			DefaultLanguage: "en",
 			Languages:       []string{"en"},
 			FileManager: domain.FileManagerSettings{
@@ -806,10 +1248,10 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 		}
 
 		settings := domain.WorkspaceSettings{
-			WebsiteURL: "https://example.com",
-			LogoURL:    "https://example.com/logo.png",
-			CoverURL:   "https://example.com/cover.png",
-			Timezone:   "UTC",
+			WebsiteURL:      "https://example.com",
+			LogoURL:         "https://example.com/logo.png",
+			CoverURL:        "https://example.com/cover.png",
+			Timezone:        "UTC",
 			DefaultLanguage: "en",
 			Languages:       []string{"en"},
 			FileManager: domain.FileManagerSettings{
@@ -834,10 +1276,10 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 		}
 
 		settings := domain.WorkspaceSettings{
-			WebsiteURL: "https://example.com",
-			LogoURL:    "https://example.com/logo.png",
-			CoverURL:   "https://example.com/cover.png",
-			Timezone:   "UTC",
+			WebsiteURL:      "https://example.com",
+			LogoURL:         "https://example.com/logo.png",
+			CoverURL:        "https://example.com/cover.png",
+			Timezone:        "UTC",
 			DefaultLanguage: "en",
 			Languages:       []string{"en"},
 			FileManager: domain.FileManagerSettings{
@@ -856,7 +1298,11 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 		assert.Equal(t, assert.AnError, err)
 	})
 
-	t.Run("successful update with custom field labels", func(t *testing.T) {
+	t.Run("preserves custom field labels and ignores request labels", func(t *testing.T) {
+		// Custom field labels are managed exclusively via SetCustomFieldLabels. UpdateWorkspace
+		// must NOT modify them: it preserves the labels already stored on the workspace and
+		// ignores any labels passed in the update request (prevents a stale owner save from
+		// clobbering labels set by a member with workspace:write).
 		expectedUser := &domain.User{
 			ID: userID,
 		}
@@ -867,18 +1313,18 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 			Role:        "owner",
 		}
 
-		customFieldLabels := map[string]string{
-			"custom_string_1":   "Company Name",
-			"custom_number_1":   "Revenue",
-			"custom_datetime_1": "Contract Start",
-			"custom_json_1":     "Metadata",
+		// Labels already stored on the workspace (set via the dedicated endpoint).
+		existingLabels := map[string]string{
+			"custom_string_1": "Existing Label",
+		}
+		// Different labels in the update request — these must be IGNORED.
+		requestLabels := map[string]string{
+			"custom_number_1": "From Request",
 		}
 
 		settings := domain.WorkspaceSettings{
-			WebsiteURL: "https://example.com",
-			LogoURL:    "https://example.com/logo.png",
-			CoverURL:   "https://example.com/cover.png",
-			Timezone:   "UTC",
+			WebsiteURL:      "https://example.com",
+			Timezone:        "UTC",
 			DefaultLanguage: "en",
 			Languages:       []string{"en"},
 			FileManager: domain.FileManagerSettings{
@@ -886,14 +1332,15 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 				Bucket:    "my-bucket",
 				AccessKey: "AKIAIOSFODNN7EXAMPLE",
 			},
-			CustomFieldLabels: customFieldLabels,
+			CustomFieldLabels: requestLabels,
 		}
 
 		existingWorkspace := &domain.Workspace{
 			ID:   workspaceID,
 			Name: "Original Workspace Name",
 			Settings: domain.WorkspaceSettings{
-				WebsiteURL: "https://old-example.com",
+				WebsiteURL:        "https://old-example.com",
+				CustomFieldLabels: existingLabels,
 			},
 			CreatedAt: time.Now().Add(-24 * time.Hour),
 			UpdatedAt: time.Now().Add(-24 * time.Hour),
@@ -903,20 +1350,70 @@ func TestWorkspaceService_UpdateWorkspace(t *testing.T) {
 		mockRepo.EXPECT().GetUserWorkspace(ctx, userID, workspaceID).Return(expectedUserWorkspace, nil)
 		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existingWorkspace, nil)
 		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, workspace *domain.Workspace) error {
-			// Verify custom field labels are correctly set
-			assert.NotNil(t, workspace.Settings.CustomFieldLabels)
-			assert.Equal(t, customFieldLabels, workspace.Settings.CustomFieldLabels)
-			assert.Equal(t, "Company Name", workspace.Settings.CustomFieldLabels["custom_string_1"])
-			assert.Equal(t, "Revenue", workspace.Settings.CustomFieldLabels["custom_number_1"])
-			assert.Equal(t, "Contract Start", workspace.Settings.CustomFieldLabels["custom_datetime_1"])
-			assert.Equal(t, "Metadata", workspace.Settings.CustomFieldLabels["custom_json_1"])
+			// Existing labels preserved, request labels ignored.
+			assert.Equal(t, existingLabels, workspace.Settings.CustomFieldLabels)
+			assert.NotContains(t, workspace.Settings.CustomFieldLabels, "custom_number_1")
 			return nil
 		})
 
 		workspace, err := service.UpdateWorkspace(ctx, workspaceID, "Updated Workspace", settings)
 		require.NoError(t, err)
 		assert.NotNil(t, workspace)
-		assert.Equal(t, customFieldLabels, workspace.Settings.CustomFieldLabels)
+		assert.Equal(t, existingLabels, workspace.Settings.CustomFieldLabels)
+	})
+
+	t.Run("preserves blog settings and ignores request blog fields", func(t *testing.T) {
+		// Blog settings are managed exclusively via SetBlogSettings. UpdateWorkspace
+		// must NOT modify them: it preserves the blog config already stored on the
+		// workspace and ignores any blog fields passed in the update request (prevents
+		// a stale owner save from clobbering blog config set by a member with blog:write).
+		expectedUser := &domain.User{ID: userID}
+		expectedUserWorkspace := &domain.UserWorkspace{
+			UserID:      userID,
+			WorkspaceID: workspaceID,
+			Role:        "owner",
+		}
+
+		// Blog config already stored on the workspace (set via the dedicated endpoint).
+		existingBlog := &domain.BlogSettings{Title: "Member's Blog"}
+
+		// The update request asks to disable the blog and change its title — both IGNORED.
+		settings := domain.WorkspaceSettings{
+			WebsiteURL:      "https://example.com",
+			Timezone:        "UTC",
+			DefaultLanguage: "en",
+			Languages:       []string{"en"},
+			BlogEnabled:     false,
+			BlogSettings:    &domain.BlogSettings{Title: "From Request"},
+		}
+
+		existingWorkspace := &domain.Workspace{
+			ID:   workspaceID,
+			Name: "Original Workspace Name",
+			Settings: domain.WorkspaceSettings{
+				WebsiteURL:   "https://old-example.com",
+				BlogEnabled:  true,
+				BlogSettings: existingBlog,
+			},
+			CreatedAt: time.Now().Add(-24 * time.Hour),
+			UpdatedAt: time.Now().Add(-24 * time.Hour),
+		}
+
+		mockAuthService.EXPECT().AuthenticateUserForWorkspace(ctx, workspaceID).Return(ctx, expectedUser, nil, nil)
+		mockRepo.EXPECT().GetUserWorkspace(ctx, userID, workspaceID).Return(expectedUserWorkspace, nil)
+		mockRepo.EXPECT().GetByID(ctx, workspaceID).Return(existingWorkspace, nil)
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, workspace *domain.Workspace) error {
+			// Existing blog config preserved, request blog fields ignored.
+			assert.True(t, workspace.Settings.BlogEnabled)
+			assert.Equal(t, existingBlog, workspace.Settings.BlogSettings)
+			return nil
+		})
+
+		workspace, err := service.UpdateWorkspace(ctx, workspaceID, "Updated Workspace", settings)
+		require.NoError(t, err)
+		assert.NotNil(t, workspace)
+		assert.True(t, workspace.Settings.BlogEnabled)
+		assert.Equal(t, existingBlog, workspace.Settings.BlogSettings)
 	})
 
 	t.Run("preserves template blocks when not provided", func(t *testing.T) {
@@ -3258,5 +3755,403 @@ func TestWorkspaceService_deleteSupabaseIntegrationResources(t *testing.T) {
 		err := service.deleteSupabaseIntegrationResources(ctx, workspaceID, integrationID)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list templates")
+	})
+}
+
+func TestWorkspaceService_InviteMember_TeamMemberLimit(t *testing.T) {
+	workspaceID := "ws-123"
+	inviterID := "inviter-123"
+	email := "newuser@example.com"
+
+	setupService := func(t *testing.T, maxUsers int) (
+		*WorkspaceService,
+		*mocks.MockWorkspaceRepository,
+		*mocks.MockUserServiceInterface,
+		*mocks.MockAuthService,
+		*pkgmocks.MockLogger,
+	) {
+		ctrl := gomock.NewController(t)
+		mockRepo := mocks.NewMockWorkspaceRepository(ctrl)
+		mockUserRepo := mocks.NewMockUserRepository(ctrl)
+		mockLogger := pkgmocks.NewMockLogger(ctrl)
+		mockUserService := mocks.NewMockUserServiceInterface(ctrl)
+		mockAuthService := mocks.NewMockAuthService(ctrl)
+		mockMailer := pkgmocks.NewMockMailer(ctrl)
+		mockConfig := &config.Config{RootEmail: "test@example.com", MaxUsers: maxUsers, Environment: "development"}
+		mockContactService := mocks.NewMockContactService(ctrl)
+		mockListService := mocks.NewMockListService(ctrl)
+		mockContactListService := mocks.NewMockContactListService(ctrl)
+		mockTemplateService := mocks.NewMockTemplateService(ctrl)
+		mockWebhookRegService := mocks.NewMockWebhookRegistrationService(ctrl)
+
+		mockLogger.EXPECT().WithField(gomock.Any(), gomock.Any()).Return(mockLogger).AnyTimes()
+		mockLogger.EXPECT().Error(gomock.Any()).AnyTimes()
+		mockLogger.EXPECT().Info(gomock.Any()).AnyTimes()
+
+		service := NewWorkspaceService(
+			mockRepo, mockUserRepo, mocks.NewMockTaskRepository(ctrl),
+			mockLogger, mockUserService, mockAuthService, mockMailer,
+			mockConfig, mockContactService, mockListService,
+			mockContactListService, mockTemplateService, mockWebhookRegService,
+			"secret_key", &SupabaseService{}, &DNSVerificationService{}, &BlogService{},
+		)
+		return service, mockRepo, mockUserService, mockAuthService, mockLogger
+	}
+
+	t.Run("limit reached", func(t *testing.T) {
+		service, mockRepo, _, mockAuthService, _ := setupService(t, 3)
+
+		inviter := &domain.User{ID: inviterID}
+		mockAuthService.EXPECT().
+			AuthenticateUserForWorkspace(gomock.Any(), workspaceID).
+			Return(context.Background(), inviter, nil, nil)
+		mockRepo.EXPECT().
+			GetByID(gomock.Any(), workspaceID).
+			Return(&domain.Workspace{ID: workspaceID}, nil)
+		mockRepo.EXPECT().
+			IsUserWorkspaceMember(gomock.Any(), inviterID, workspaceID).
+			Return(true, nil)
+		mockRepo.EXPECT().
+			CountWorkspaceMembersAndInvitations(gomock.Any(), workspaceID).
+			Return(3, nil)
+
+		_, _, err := service.InviteMember(context.Background(), workspaceID, email, domain.UserPermissions{})
+		require.Error(t, err)
+
+		var limitErr *domain.ErrTeamMemberLimitReached
+		assert.True(t, errors.As(err, &limitErr))
+		assert.Equal(t, 3, limitErr.Limit)
+		assert.Equal(t, 3, limitErr.Current)
+	})
+
+	t.Run("under limit", func(t *testing.T) {
+		service, mockRepo, mockUserService, mockAuthService, _ := setupService(t, 3)
+
+		inviter := &domain.User{ID: inviterID}
+		mockAuthService.EXPECT().
+			AuthenticateUserForWorkspace(gomock.Any(), workspaceID).
+			Return(context.Background(), inviter, nil, nil)
+		mockRepo.EXPECT().
+			GetByID(gomock.Any(), workspaceID).
+			Return(&domain.Workspace{ID: workspaceID}, nil)
+		mockRepo.EXPECT().
+			IsUserWorkspaceMember(gomock.Any(), inviterID, workspaceID).
+			Return(true, nil)
+		mockRepo.EXPECT().
+			CountWorkspaceMembersAndInvitations(gomock.Any(), workspaceID).
+			Return(2, nil)
+
+		// After limit check passes, the flow continues — mock the user lookup
+		mockUserService.EXPECT().
+			GetUserByID(gomock.Any(), inviterID).
+			Return(&domain.User{ID: inviterID, Name: "Inviter"}, nil)
+		mockUserService.EXPECT().
+			GetUserByEmail(gomock.Any(), email).
+			Return(nil, fmt.Errorf("user not found"))
+
+		// User doesn't exist → invitation created
+		mockRepo.EXPECT().
+			CreateInvitation(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockAuthService.EXPECT().
+			GenerateInvitationToken(gomock.Any()).
+			Return("token-123")
+
+		_, _, err := service.InviteMember(context.Background(), workspaceID, email, domain.UserPermissions{})
+		require.NoError(t, err)
+	})
+
+	t.Run("unlimited when MaxUsers is zero", func(t *testing.T) {
+		service, mockRepo, mockUserService, mockAuthService, _ := setupService(t, 0)
+
+		inviter := &domain.User{ID: inviterID}
+		mockAuthService.EXPECT().
+			AuthenticateUserForWorkspace(gomock.Any(), workspaceID).
+			Return(context.Background(), inviter, nil, nil)
+		mockRepo.EXPECT().
+			GetByID(gomock.Any(), workspaceID).
+			Return(&domain.Workspace{ID: workspaceID}, nil)
+		mockRepo.EXPECT().
+			IsUserWorkspaceMember(gomock.Any(), inviterID, workspaceID).
+			Return(true, nil)
+
+		// CountWorkspaceMembersAndInvitations should NOT be called when MaxUsers=0
+		// (gomock will fail if it's called since no expectation is set)
+
+		mockUserService.EXPECT().
+			GetUserByID(gomock.Any(), inviterID).
+			Return(&domain.User{ID: inviterID, Name: "Inviter"}, nil)
+		mockUserService.EXPECT().
+			GetUserByEmail(gomock.Any(), email).
+			Return(nil, fmt.Errorf("user not found"))
+		mockRepo.EXPECT().
+			CreateInvitation(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockAuthService.EXPECT().
+			GenerateInvitationToken(gomock.Any()).
+			Return("token-123")
+
+		_, _, err := service.InviteMember(context.Background(), workspaceID, email, domain.UserPermissions{})
+		require.NoError(t, err)
+	})
+}
+
+func TestWorkspaceService_AcceptInvitation_TeamMemberLimit(t *testing.T) {
+	invitationID := "invitation-123"
+	workspaceID := "ws-123"
+	email := "test@example.com"
+
+	setupService := func(t *testing.T, maxUsers int) (
+		*WorkspaceService,
+		*mocks.MockWorkspaceRepository,
+		*mocks.MockUserServiceInterface,
+		*mocks.MockUserRepository,
+		*mocks.MockAuthService,
+	) {
+		ctrl := gomock.NewController(t)
+		mockRepo := mocks.NewMockWorkspaceRepository(ctrl)
+		mockUserRepo := mocks.NewMockUserRepository(ctrl)
+		mockLogger := pkgmocks.NewMockLogger(ctrl)
+		mockUserService := mocks.NewMockUserServiceInterface(ctrl)
+		mockAuthService := mocks.NewMockAuthService(ctrl)
+		mockMailer := pkgmocks.NewMockMailer(ctrl)
+		mockConfig := &config.Config{RootEmail: "test@example.com", MaxUsers: maxUsers}
+		mockContactService := mocks.NewMockContactService(ctrl)
+		mockListService := mocks.NewMockListService(ctrl)
+		mockContactListService := mocks.NewMockContactListService(ctrl)
+		mockTemplateService := mocks.NewMockTemplateService(ctrl)
+		mockWebhookRegService := mocks.NewMockWebhookRegistrationService(ctrl)
+
+		mockLogger.EXPECT().WithField(gomock.Any(), gomock.Any()).Return(mockLogger).AnyTimes()
+		mockLogger.EXPECT().Error(gomock.Any()).AnyTimes()
+		mockLogger.EXPECT().Info(gomock.Any()).AnyTimes()
+		mockLogger.EXPECT().Warn(gomock.Any()).AnyTimes()
+
+		service := NewWorkspaceService(
+			mockRepo, mockUserRepo, mocks.NewMockTaskRepository(ctrl),
+			mockLogger, mockUserService, mockAuthService, mockMailer,
+			mockConfig, mockContactService, mockListService,
+			mockContactListService, mockTemplateService, mockWebhookRegService,
+			"secret_key", &SupabaseService{}, &DNSVerificationService{}, &BlogService{},
+		)
+		return service, mockRepo, mockUserService, mockUserRepo, mockAuthService
+	}
+
+	t.Run("limit reached on accept", func(t *testing.T) {
+		// MaxUsers=3, count returns 4 (3 members + 1 invitation including the one being accepted).
+		// The code subtracts 1 for the current invitation, so effective count = 3 >= limit 3 → blocked.
+		service, mockRepo, mockUserService, _, _ := setupService(t, 3)
+
+		mockRepo.EXPECT().
+			GetInvitationByID(gomock.Any(), invitationID).
+			Return(&domain.WorkspaceInvitation{
+				ID:          invitationID,
+				Email:       email,
+				WorkspaceID: workspaceID,
+				Permissions: domain.UserPermissions{},
+			}, nil)
+
+		// Existing user
+		mockUserService.EXPECT().
+			GetUserByEmail(gomock.Any(), email).
+			Return(&domain.User{ID: "user-123", Email: email}, nil)
+		mockRepo.EXPECT().
+			IsUserWorkspaceMember(gomock.Any(), "user-123", workspaceID).
+			Return(false, nil)
+		mockRepo.EXPECT().
+			CountWorkspaceMembersAndInvitations(gomock.Any(), workspaceID).
+			Return(4, nil)
+
+		_, err := service.AcceptInvitation(context.Background(), invitationID, workspaceID, email)
+		require.Error(t, err)
+
+		var limitErr *domain.ErrTeamMemberLimitReached
+		assert.True(t, errors.As(err, &limitErr))
+		assert.Equal(t, 3, limitErr.Limit)
+	})
+
+	t.Run("accepts when count equals limit (current invitation counted)", func(t *testing.T) {
+		// MaxUsers=3, count returns 3 (2 members + 1 invitation being accepted).
+		// The code subtracts 1 → effective count = 2 < 3 → allowed.
+		service, mockRepo, mockUserService, mockUserRepo, mockAuthService := setupService(t, 3)
+
+		mockRepo.EXPECT().
+			GetInvitationByID(gomock.Any(), invitationID).
+			Return(&domain.WorkspaceInvitation{
+				ID:          invitationID,
+				Email:       email,
+				WorkspaceID: workspaceID,
+				Permissions: domain.UserPermissions{},
+			}, nil)
+
+		mockUserService.EXPECT().
+			GetUserByEmail(gomock.Any(), email).
+			Return(nil, &domain.ErrUserNotFound{Message: "not found"})
+		mockUserRepo.EXPECT().
+			CreateUser(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockRepo.EXPECT().
+			CountWorkspaceMembersAndInvitations(gomock.Any(), workspaceID).
+			Return(3, nil)
+		mockRepo.EXPECT().
+			AddUserToWorkspace(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockUserRepo.EXPECT().
+			CreateSession(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockAuthService.EXPECT().
+			GenerateUserAuthToken(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return("auth-token")
+		mockRepo.EXPECT().
+			DeleteInvitation(gomock.Any(), invitationID).
+			Return(nil)
+
+		resp, err := service.AcceptInvitation(context.Background(), invitationID, workspaceID, email)
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
+	t.Run("under limit on accept", func(t *testing.T) {
+		service, mockRepo, mockUserService, mockUserRepo, mockAuthService := setupService(t, 3)
+
+		mockRepo.EXPECT().
+			GetInvitationByID(gomock.Any(), invitationID).
+			Return(&domain.WorkspaceInvitation{
+				ID:          invitationID,
+				Email:       email,
+				WorkspaceID: workspaceID,
+				Permissions: domain.UserPermissions{},
+			}, nil)
+
+		mockUserService.EXPECT().
+			GetUserByEmail(gomock.Any(), email).
+			Return(nil, &domain.ErrUserNotFound{Message: "not found"})
+		mockUserRepo.EXPECT().
+			CreateUser(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockRepo.EXPECT().
+			CountWorkspaceMembersAndInvitations(gomock.Any(), workspaceID).
+			Return(2, nil)
+		mockRepo.EXPECT().
+			AddUserToWorkspace(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockUserRepo.EXPECT().
+			CreateSession(gomock.Any(), gomock.Any()).
+			Return(nil)
+		mockAuthService.EXPECT().
+			GenerateUserAuthToken(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return("auth-token")
+		mockRepo.EXPECT().
+			DeleteInvitation(gomock.Any(), invitationID).
+			Return(nil)
+
+		resp, err := service.AcceptInvitation(context.Background(), invitationID, workspaceID, email)
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, "auth-token", resp.Token)
+	})
+}
+
+func TestWorkspaceService_CreateWorkspace_WorkspaceLimit(t *testing.T) {
+	setupService := func(t *testing.T, maxWorkspaces int) (
+		*WorkspaceService,
+		*mocks.MockWorkspaceRepository,
+		*mocks.MockAuthService,
+		*pkgmocks.MockLogger,
+	) {
+		ctrl := gomock.NewController(t)
+		mockRepo := mocks.NewMockWorkspaceRepository(ctrl)
+		mockUserRepo := mocks.NewMockUserRepository(ctrl)
+		mockLogger := pkgmocks.NewMockLogger(ctrl)
+		mockUserService := mocks.NewMockUserServiceInterface(ctrl)
+		mockAuthService := mocks.NewMockAuthService(ctrl)
+		mockMailer := pkgmocks.NewMockMailer(ctrl)
+		mockConfig := &config.Config{RootEmail: "test@example.com", MaxWorkspaces: maxWorkspaces, Environment: "development"}
+		mockContactService := mocks.NewMockContactService(ctrl)
+		mockListService := mocks.NewMockListService(ctrl)
+		mockContactListService := mocks.NewMockContactListService(ctrl)
+		mockTemplateService := mocks.NewMockTemplateService(ctrl)
+		mockWebhookRegService := mocks.NewMockWebhookRegistrationService(ctrl)
+
+		mockLogger.EXPECT().WithField(gomock.Any(), gomock.Any()).Return(mockLogger).AnyTimes()
+		mockLogger.EXPECT().Error(gomock.Any()).AnyTimes()
+		mockLogger.EXPECT().Info(gomock.Any()).AnyTimes()
+
+		service := NewWorkspaceService(
+			mockRepo, mockUserRepo, mocks.NewMockTaskRepository(ctrl),
+			mockLogger, mockUserService, mockAuthService, mockMailer,
+			mockConfig, mockContactService, mockListService,
+			mockContactListService, mockTemplateService, mockWebhookRegService,
+			"secret_key", &SupabaseService{}, &DNSVerificationService{}, &BlogService{},
+		)
+		return service, mockRepo, mockAuthService, mockLogger
+	}
+
+	t.Run("limit reached", func(t *testing.T) {
+		service, mockRepo, mockAuthService, _ := setupService(t, 3)
+
+		rootUser := &domain.User{ID: "root-user", Email: "test@example.com"}
+		mockAuthService.EXPECT().
+			AuthenticateUserFromContext(gomock.Any()).
+			Return(rootUser, nil)
+		mockRepo.EXPECT().
+			CountWorkspaces(gomock.Any()).
+			Return(3, nil)
+
+		_, err := service.CreateWorkspace(context.Background(), "newws", "New Workspace", "", "", "", "UTC", domain.FileManagerSettings{}, "en", []string{"en"})
+		require.Error(t, err)
+
+		var limitErr *domain.ErrWorkspaceLimitReached
+		assert.True(t, errors.As(err, &limitErr))
+		assert.Equal(t, 3, limitErr.Limit)
+		assert.Equal(t, 3, limitErr.Current)
+	})
+
+	t.Run("under limit", func(t *testing.T) {
+		service, mockRepo, mockAuthService, _ := setupService(t, 3)
+
+		rootUser := &domain.User{ID: "root-user", Email: "test@example.com"}
+		mockAuthService.EXPECT().
+			AuthenticateUserFromContext(gomock.Any()).
+			Return(rootUser, nil)
+		mockRepo.EXPECT().
+			CountWorkspaces(gomock.Any()).
+			Return(2, nil)
+		// After limit check passes, mock GetByID to return existing workspace so we get
+		// a clean "workspace already exists" error — proving the limit check passed
+		mockRepo.EXPECT().
+			GetByID(gomock.Any(), "newws").
+			Return(&domain.Workspace{ID: "newws"}, nil)
+
+		_, err := service.CreateWorkspace(context.Background(), "newws", "New Workspace", "", "", "", "UTC", domain.FileManagerSettings{}, "en", []string{"en"})
+		require.Error(t, err)
+		assert.Equal(t, "workspace already exists", err.Error())
+
+		var limitErr *domain.ErrWorkspaceLimitReached
+		assert.False(t, errors.As(err, &limitErr), "error should NOT be a workspace limit error")
+	})
+
+	t.Run("unlimited when MaxWorkspaces is zero", func(t *testing.T) {
+		service, mockRepo, mockAuthService, _ := setupService(t, 0)
+
+		rootUser := &domain.User{ID: "root-user", Email: "test@example.com"}
+		mockAuthService.EXPECT().
+			AuthenticateUserFromContext(gomock.Any()).
+			Return(rootUser, nil)
+
+		// CountWorkspaces should NOT be called when MaxWorkspaces=0
+		// (gomock will fail if it's called since no expectation is set)
+
+		// Mock GetByID to return existing workspace so flow exits cleanly
+		mockRepo.EXPECT().
+			GetByID(gomock.Any(), "newws").
+			Return(&domain.Workspace{ID: "newws"}, nil)
+
+		_, err := service.CreateWorkspace(context.Background(), "newws", "New Workspace", "", "", "", "UTC", domain.FileManagerSettings{}, "en", []string{"en"})
+		require.Error(t, err)
+		assert.Equal(t, "workspace already exists", err.Error())
+
+		var limitErr *domain.ErrWorkspaceLimitReached
+		assert.False(t, errors.As(err, &limitErr), "error should NOT be a workspace limit error")
 	})
 }

@@ -149,6 +149,21 @@ func (s *WorkspaceService) CreateWorkspace(ctx context.Context, id string, name 
 		return nil, &domain.ErrUnauthorized{Message: "only root user can create workspaces"}
 	}
 
+	// Check workspace limit
+	if s.config.MaxWorkspaces > 0 {
+		count, err := s.repo.CountWorkspaces(ctx)
+		if err != nil {
+			s.logger.WithField("error", err.Error()).Error("Failed to count workspaces")
+			return nil, err
+		}
+		if count >= s.config.MaxWorkspaces {
+			return nil, &domain.ErrWorkspaceLimitReached{
+				Limit:   s.config.MaxWorkspaces,
+				Current: count,
+			}
+		}
+	}
+
 	randomSecretKey, err := GenerateSecureKey(32) // 32 bytes = 256 bits
 	if err != nil {
 		s.logger.WithField("workspace_id", id).WithField("error", err.Error()).Error("Failed to generate secure key")
@@ -357,9 +372,14 @@ func (s *WorkspaceService) UpdateWorkspace(ctx context.Context, id string, name 
 	}
 
 	existingWorkspace.Settings.CustomEndpointURL = settings.CustomEndpointURL
-	existingWorkspace.Settings.CustomFieldLabels = settings.CustomFieldLabels
-	existingWorkspace.Settings.BlogEnabled = settings.BlogEnabled
-	existingWorkspace.Settings.BlogSettings = settings.BlogSettings
+	// Note: Custom field labels and blog settings are intentionally NOT updated here.
+	// They are each managed exclusively via dedicated, permission-checked endpoints
+	// (/api/workspaces.setCustomFieldLabels for labels, /api/workspaces.setBlogSettings
+	// for the blog enable flag + config), which enforce granular permissions
+	// (workspace:write and blog:write respectively) instead of requiring owner role.
+	// This also prevents an owner's (possibly stale) settings save from clobbering
+	// values set by a member. Existing labels and blog settings on existingWorkspace
+	// are preserved as-is.
 	existingWorkspace.Settings.DefaultLanguage = settings.DefaultLanguage
 	existingWorkspace.Settings.Languages = settings.Languages
 
@@ -474,6 +494,21 @@ func (s *WorkspaceService) AddUserToWorkspace(ctx context.Context, workspaceID s
 	if requesterWorkspace.Role != "owner" {
 		s.logger.WithField("workspace_id", workspaceID).WithField("user_id", userID).WithField("requester_id", user.ID).WithField("role", requesterWorkspace.Role).Error("Requester is not an owner of the workspace")
 		return &domain.ErrUnauthorized{Message: "user is not an owner of the workspace"}
+	}
+
+	// Check team member limit
+	if s.config.MaxUsers > 0 {
+		count, err := s.repo.CountWorkspaceMembersAndInvitations(ctx, workspaceID)
+		if err != nil {
+			s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to count workspace members")
+			return err
+		}
+		if count >= s.config.MaxUsers {
+			return &domain.ErrTeamMemberLimitReached{
+				Limit:   s.config.MaxUsers,
+				Current: count,
+			}
+		}
 	}
 
 	// Use the permissions passed as parameter
@@ -623,6 +658,21 @@ func (s *WorkspaceService) InviteMember(ctx context.Context, workspaceID, email 
 		return nil, "", fmt.Errorf("inviter is not a member of the workspace")
 	}
 
+	// Check team member limit
+	if s.config.MaxUsers > 0 {
+		count, err := s.repo.CountWorkspaceMembersAndInvitations(ctx, workspaceID)
+		if err != nil {
+			s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to count workspace members")
+			return nil, "", err
+		}
+		if count >= s.config.MaxUsers {
+			return nil, "", &domain.ErrTeamMemberLimitReached{
+				Limit:   s.config.MaxUsers,
+				Current: count,
+			}
+		}
+	}
+
 	// Get inviter user details for the email
 	inviterDetails, err := s.userService.GetUserByID(ctx, inviter.ID)
 	if err != nil {
@@ -691,9 +741,12 @@ func (s *WorkspaceService) InviteMember(ctx context.Context, workspaceID, email 
 	// Generate a JWT token with the invitation details
 	token := s.authService.GenerateInvitationToken(invitation)
 
-	// Send invitation email in production mode
+	// Send invitation email in production mode.
+	// This path only runs for invitees who do not yet have an account, so they
+	// have no language preference of their own — the email is localized in the
+	// inviter's language.
 	if !s.config.IsDevelopment() {
-		err = s.mailer.SendWorkspaceInvitation(email, workspace.Name, inviterName, token)
+		err = s.mailer.SendWorkspaceInvitation(email, workspace.Name, inviterName, token, inviterDetails.Language)
 		if err != nil {
 			s.logger.WithField("workspace_id", workspaceID).WithField("email", email).WithField("error", err.Error()).Error("Failed to send invitation email")
 			// Continue even if email sending fails
@@ -767,6 +820,98 @@ func (s *WorkspaceService) SetUserPermissions(ctx context.Context, workspaceID, 
 		if len(sessions) > 0 {
 			s.logger.WithField("target_user_id", userID).WithField("sessions_invalidated", len(sessions)).Info("Invalidated user sessions after permission change")
 		}
+	}
+
+	return nil
+}
+
+// SetCustomFieldLabels updates the custom field display labels for a workspace.
+// Unlike most workspace settings (which are owner-only via UpdateWorkspace), this
+// is the dedicated, granular-permission path: it requires write access to the
+// workspace resource, so workspace owners and members with workspace:write (e.g.
+// "full access") can manage custom field labels.
+func (s *WorkspaceService) SetCustomFieldLabels(ctx context.Context, workspaceID string, labels map[string]string) error {
+	var userWorkspace *domain.UserWorkspace
+	var err error
+	ctx, _, userWorkspace, err = s.authService.AuthenticateUserForWorkspace(ctx, workspaceID)
+	if err != nil {
+		return fmt.Errorf("failed to authenticate user: %w", err)
+	}
+
+	// Check permission for writing workspace settings
+	if !userWorkspace.HasPermission(domain.PermissionResourceWorkspace, domain.PermissionTypeWrite) {
+		return domain.NewPermissionError(
+			domain.PermissionResourceWorkspace,
+			domain.PermissionTypeWrite,
+			"Insufficient permissions: write access to workspace required",
+		)
+	}
+
+	// Load the existing workspace and update only the custom field labels,
+	// preserving all other settings.
+	existingWorkspace, err := s.repo.GetByID(ctx, workspaceID)
+	if err != nil {
+		s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to get existing workspace")
+		return err
+	}
+
+	existingWorkspace.Settings.CustomFieldLabels = labels
+
+	// Canonical validation (covers non-console API consumers too)
+	if err := existingWorkspace.Settings.ValidateCustomFieldLabels(); err != nil {
+		return err
+	}
+
+	if err := s.repo.Update(ctx, existingWorkspace); err != nil {
+		s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to update custom field labels")
+		return err
+	}
+
+	return nil
+}
+
+// SetBlogSettings updates the workspace-level blog configuration (the enable flag
+// plus title/SEO/pagination/feed settings). Unlike UpdateWorkspace (owner-only),
+// this is gated on the granular blog:write permission so a delegated blog manager
+// can manage blog config. It loads the workspace and mutates only the blog fields,
+// preserving all other settings.
+func (s *WorkspaceService) SetBlogSettings(ctx context.Context, workspaceID string, enabled bool, settings *domain.BlogSettings) error {
+	var userWorkspace *domain.UserWorkspace
+	var err error
+	ctx, _, userWorkspace, err = s.authService.AuthenticateUserForWorkspace(ctx, workspaceID)
+	if err != nil {
+		return fmt.Errorf("failed to authenticate user: %w", err)
+	}
+
+	// Blog settings follow the blog feature's own permission, not workspace:write.
+	if !userWorkspace.HasPermission(domain.PermissionResourceBlog, domain.PermissionTypeWrite) {
+		return domain.NewPermissionError(
+			domain.PermissionResourceBlog,
+			domain.PermissionTypeWrite,
+			"Insufficient permissions: write access to blog required",
+		)
+	}
+
+	// Load the existing workspace and update only the blog fields, preserving all
+	// other settings.
+	existingWorkspace, err := s.repo.GetByID(ctx, workspaceID)
+	if err != nil {
+		s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to get existing workspace")
+		return err
+	}
+
+	existingWorkspace.Settings.BlogEnabled = enabled
+	existingWorkspace.Settings.BlogSettings = settings
+
+	// Canonical validation (covers non-console API consumers too). Validate has a
+	// nil-receiver guard, so a nil settings (disable/clear) is fine.
+	if err := existingWorkspace.Settings.BlogSettings.Validate(); err != nil {
+		return err
+	}
+
+	if err := s.repo.Update(ctx, existingWorkspace); err != nil {
+		s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to update blog settings")
+		return err
 	}
 
 	return nil
@@ -969,6 +1114,24 @@ func (s *WorkspaceService) AcceptInvitation(ctx context.Context, invitationID, w
 				s.logger.WithField("invitation_id", invitationID).WithField("error", err.Error()).Warn("Failed to delete invitation after finding user is already a member")
 			}
 			return nil, fmt.Errorf("user is already a member of the workspace")
+		}
+	}
+
+	// Check team member limit before adding to workspace.
+	// Subtract 1 because the invitation being accepted is still counted in the total
+	// but will be deleted after the user is added — accepting converts an invitation
+	// into a member (net-zero change), so it should not block acceptance.
+	if s.config.MaxUsers > 0 {
+		count, err := s.repo.CountWorkspaceMembersAndInvitations(ctx, workspaceID)
+		if err != nil {
+			s.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to count workspace members")
+			return nil, err
+		}
+		if count-1 >= s.config.MaxUsers {
+			return nil, &domain.ErrTeamMemberLimitReached{
+				Limit:   s.config.MaxUsers,
+				Current: count,
+			}
 		}
 	}
 
@@ -1301,7 +1464,7 @@ func (s *WorkspaceService) UpdateIntegration(ctx context.Context, req domain.Upd
 		if req.LLMProvider != nil {
 			updatedIntegration.LLMProvider = req.LLMProvider
 
-			// Preserve encrypted API key if not provided in update
+			// Preserve Anthropic encrypted API key if not provided in update
 			if req.LLMProvider.Anthropic != nil &&
 				req.LLMProvider.Anthropic.APIKey == "" &&
 				req.LLMProvider.Anthropic.EncryptedAPIKey == "" &&
@@ -1309,6 +1472,16 @@ func (s *WorkspaceService) UpdateIntegration(ctx context.Context, req domain.Upd
 				existingIntegration.LLMProvider.Anthropic != nil {
 				updatedIntegration.LLMProvider.Anthropic.EncryptedAPIKey =
 					existingIntegration.LLMProvider.Anthropic.EncryptedAPIKey
+			}
+
+			// Preserve OpenAI encrypted API key if not provided in update
+			if req.LLMProvider.OpenAI != nil &&
+				req.LLMProvider.OpenAI.APIKey == "" &&
+				req.LLMProvider.OpenAI.EncryptedAPIKey == "" &&
+				existingIntegration.LLMProvider != nil &&
+				existingIntegration.LLMProvider.OpenAI != nil {
+				updatedIntegration.LLMProvider.OpenAI.EncryptedAPIKey =
+					existingIntegration.LLMProvider.OpenAI.EncryptedAPIKey
 			}
 		} else {
 			// If no settings provided, preserve existing

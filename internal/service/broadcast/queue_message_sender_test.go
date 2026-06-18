@@ -433,6 +433,7 @@ func TestQueueMessageSender_SendBatch(t *testing.T) {
 			"integration-1",
 			"secret-key",
 			"https://api.example.com",
+			"",
 			true,
 			"broadcast-1",
 			recipients,
@@ -474,6 +475,7 @@ func TestQueueMessageSender_SendBatch(t *testing.T) {
 			"integration-1",
 			"secret-key",
 			"https://api.example.com",
+			"",
 			true,
 			"broadcast-1",
 			[]*domain.ContactWithList{}, // Empty
@@ -550,6 +552,7 @@ func TestQueueMessageSender_SendBatch(t *testing.T) {
 			"integration-1",
 			"secret-key",
 			"https://api.example.com",
+			"",
 			true,
 			"broadcast-1",
 			recipients,
@@ -619,11 +622,14 @@ func TestQueueMessageSender_SendBatch(t *testing.T) {
 				entry := entries[0]
 
 				// System variables should be rendered in HTML (not raw Liquid)
-				// URLs are URL-encoded inside click tracking wrapper, so check for encoded format
-				assert.Contains(t, entry.Payload.HTMLContent, "notification-center",
-					"notification_center_url should be rendered to actual URL")
-				assert.Contains(t, entry.Payload.HTMLContent, "action%3Dunsubscribe",
-					"unsubscribe_url should be rendered to actual URL (URL-encoded in tracking)")
+				// URLs are now inside encrypted /r/ tracking tokens
+				assert.Contains(t, entry.Payload.HTMLContent, "/r/",
+					"system URLs should be rendered as encrypted tracking redirects")
+				// Tracking pixel should be present with encrypted /t/ path and table wrapper
+				assert.Contains(t, entry.Payload.HTMLContent, "/t/",
+					"tracking pixel should use encrypted /t/ path")
+				assert.Contains(t, entry.Payload.HTMLContent, `<table border="0" cellpadding="0" cellspacing="0" role="presentation"`,
+					"tracking pixel should be wrapped in a table")
 				assert.NotContains(t, entry.Payload.HTMLContent, "{{ unsubscribe_url }}",
 					"Raw Liquid syntax should not appear in HTML")
 				assert.NotContains(t, entry.Payload.HTMLContent, "{{ notification_center_url }}",
@@ -658,6 +664,7 @@ func TestQueueMessageSender_SendBatch(t *testing.T) {
 			"integration-1",
 			"test-secret-key",
 			"https://api.example.com",
+			"",
 			true,
 			"broadcast-1",
 			recipients,
@@ -752,6 +759,7 @@ func TestQueueMessageSender_SendBatch(t *testing.T) {
 			"integration-1",
 			"test-secret-key",
 			"https://api.example.com",
+			"",
 			true,
 			"broadcast-1",
 			recipients,
@@ -868,6 +876,7 @@ func TestQueueSendBatch_WithRecipientFeed_Success(t *testing.T) {
 		"integration-1",
 		"secret-key",
 		"https://api.example.com",
+		"",
 		true,
 		"broadcast-1",
 		recipients,
@@ -963,6 +972,7 @@ func TestQueueSendBatch_WithRecipientFeed_FetchError_PausesBroadcast(t *testing.
 		"integration-1",
 		"secret-key",
 		"https://api.example.com",
+		"",
 		true,
 		"broadcast-1",
 		recipients,
@@ -1059,6 +1069,7 @@ func TestQueueSendBatch_WithRecipientFeed_Disabled(t *testing.T) {
 		"integration-1",
 		"secret-key",
 		"https://api.example.com",
+		"",
 		true,
 		"broadcast-1",
 		recipients,
@@ -1149,6 +1160,7 @@ func TestQueueSendBatch_WithRecipientFeed_NilFetcher(t *testing.T) {
 		"integration-1",
 		"secret-key",
 		"https://api.example.com",
+		"",
 		true,
 		"broadcast-1",
 		recipients,

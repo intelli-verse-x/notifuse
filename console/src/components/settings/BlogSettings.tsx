@@ -19,10 +19,10 @@ import { ImageURLInput } from '../common/ImageURLInput'
 interface BlogSettingsProps {
   workspace: Workspace | null
   onWorkspaceUpdate: (workspace: Workspace) => void
-  isOwner: boolean
+  canManage: boolean
 }
 
-export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSettingsProps) {
+export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSettingsProps) {
   const { t } = useLingui()
   const [savingSettings, setSavingSettings] = useState(false)
   const [formTouched, setFormTouched] = useState(false)
@@ -35,12 +35,12 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
     queryKey: ['blog-themes', workspace?.id],
     queryFn: () =>
       workspace?.id ? blogThemesApi.list(workspace.id, { limit: 3, offset: 0 }) : null,
-    enabled: !!workspace?.id && isOwner
+    enabled: !!workspace?.id && canManage
   })
 
   useEffect(() => {
-    // Only set form values if user is owner (form exists)
-    if (!isOwner) return
+    // Only set form values if the user can manage the blog (form exists)
+    if (!canManage) return
 
     // Set form values from workspace data whenever workspace changes
     form.setFieldsValue({
@@ -51,6 +51,8 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
         icon_url: workspace?.settings.blog_settings?.icon_url || '',
         home_page_size: workspace?.settings.blog_settings?.home_page_size || 20,
         category_page_size: workspace?.settings.blog_settings?.category_page_size || 20,
+        feed_max_items: workspace?.settings.blog_settings?.feed_max_items || 20,
+        feed_summary_only: workspace?.settings.blog_settings?.feed_summary_only || false,
         seo: {
           meta_title: workspace?.settings.blog_settings?.seo?.meta_title || '',
           meta_description: workspace?.settings.blog_settings?.seo?.meta_description || '',
@@ -63,7 +65,7 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
       }
     })
     setFormTouched(false)
-  }, [workspace, form, isOwner])
+  }, [workspace, form, canManage])
 
   const handleSaveSettings = async (values: {
     blog_enabled?: boolean
@@ -73,6 +75,8 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
       icon_url?: string
       home_page_size?: number
       category_page_size?: number
+      feed_max_items?: number
+      feed_summary_only?: boolean
       seo?: {
         meta_title?: string
         meta_description?: string
@@ -125,21 +129,21 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
         }
       }
 
-      const blogSettings = values.blog_settings || undefined
+      // Blog settings are saved via a dedicated, blog:write-gated endpoint (not the
+      // owner-only workspaces.update). The endpoint always sets both fields, so resolve
+      // the intended enabled state explicitly: honor an explicit form value, otherwise
+      // keep the workspace's current state (preserves "don't toggle when only editing
+      // settings").
+      const intendedEnabled =
+        values.blog_enabled !== undefined
+          ? values.blog_enabled === true
+          : (workspace.settings.blog_enabled ?? false)
 
-      const updatedSettings = {
-        ...workspace.settings,
-        // Only update blog_enabled if it's explicitly in the form values
-        // (i.e., when enabling/disabling, not when just updating settings)
-        ...(values.blog_enabled !== undefined && { blog_enabled: values.blog_enabled === true }),
-        blog_settings: blogSettings
-      }
-      const payload = {
-        ...workspace,
-        settings: updatedSettings
-      }
-
-      await workspaceService.update(payload)
+      await workspaceService.setBlogSettings({
+        workspace_id: workspace.id,
+        blog_enabled: intendedEnabled,
+        blog_settings: values.blog_settings
+      })
 
       // Refresh the workspace data
       const response = await workspaceService.get(workspace.id)
@@ -187,7 +191,7 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
     })
   }
 
-  if (!isOwner) {
+  if (!canManage) {
     return (
       <>
         <SettingsSectionHeader title={t`Blog`} description={t`Blog styling and SEO settings`} />
@@ -379,6 +383,44 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, isOwner }: BlogSett
                     <Select.Option value={10}>10</Select.Option>
                     <Select.Option value={15}>15</Select.Option>
                     <Select.Option value={20}>20</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Divider className="!my-8" />
+
+            <SettingsSectionHeader
+              title={t`RSS / Feeds`}
+              description={t`Configure how your blog's RSS and JSON feeds are generated.`}
+              className="!mb-4"
+            />
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name={['blog_settings', 'feed_max_items']}
+                  label={t`Items per feed`}
+                  tooltip={t`Maximum number of posts to include in the RSS/JSON feed (1–20)`}
+                >
+                  <Select placeholder={t`Select feed size`}>
+                    <Select.Option value={5}>5</Select.Option>
+                    <Select.Option value={10}>10</Select.Option>
+                    <Select.Option value={15}>15</Select.Option>
+                    <Select.Option value={20}>20</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  name={['blog_settings', 'feed_summary_only']}
+                  label={t`Summary-only feed`}
+                  tooltip={t`When enabled, the feed includes only excerpts instead of full article content`}
+                >
+                  <Select placeholder={t`Select content mode`}>
+                    <Select.Option value={false}>{t`Full content`}</Select.Option>
+                    <Select.Option value={true}>{t`Excerpt only`}</Select.Option>
                   </Select>
                 </Form.Item>
               </Col>

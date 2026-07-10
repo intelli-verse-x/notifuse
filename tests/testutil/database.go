@@ -35,13 +35,11 @@ func NewDatabaseManager() *DatabaseManager {
 	// Use environment variables if set (for containerized environments)
 	testHost := getEnvOrDefault("TEST_DB_HOST", defaultHost)
 	testPort := defaultPort
-	if testHost != defaultHost {
+	if portStr := os.Getenv("TEST_DB_PORT"); portStr != "" {
+		fmt.Sscanf(portStr, "%d", &testPort)
+	} else if testHost != defaultHost {
 		// Custom host likely means internal port
-		if portStr := os.Getenv("TEST_DB_PORT"); portStr != "" {
-			fmt.Sscanf(portStr, "%d", &testPort)
-		} else {
-			testPort = 5432
-		}
+		testPort = 5432
 	}
 
 	config := &config.DatabaseConfig{
@@ -178,6 +176,11 @@ func (dm *DatabaseManager) SeedTestData() error {
 		{"550e8400-e29b-41d4-a716-446655440013", "non-member@example.com", "Non Member"},
 		{"550e8400-e29b-41d4-a716-446655440014", "template-tester@example.com", "Template Tester"},
 		{"550e8400-e29b-41d4-a716-446655440015", "template-integrator@example.com", "Template Integrator"},
+		{"550e8400-e29b-41d4-a716-446655440016", "blog-manager@example.com", "Blog Manager"},
+		{"550e8400-e29b-41d4-a716-446655440017", "blog-reader@example.com", "Blog Reader"},
+		{"550e8400-e29b-41d4-a716-446655440018", "blog-contacts@example.com", "Blog Contacts Member"},
+		{"550e8400-e29b-41d4-a716-446655440019", "blog-stranger@example.com", "Blog Stranger"},
+		{"550e8400-e29b-41d4-a716-446655440020", "blog-soleexisting@example.com", "Blog Sole Writer Member"},
 	}
 
 	testUserQuery := `

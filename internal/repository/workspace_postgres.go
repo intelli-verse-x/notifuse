@@ -635,10 +635,36 @@ func (r *workspaceRepository) IsUserWorkspaceMember(ctx context.Context, userID,
 	return count > 0, nil
 }
 
+// CountWorkspaceMembersAndInvitations returns the count of current human members
+// plus non-expired pending invitations. API key users are excluded from the count.
+func (r *workspaceRepository) CountWorkspaceMembersAndInvitations(ctx context.Context, workspaceID string) (int, error) {
+	query := `
+		SELECT
+			(SELECT COUNT(*) FROM user_workspaces uw JOIN users u ON uw.user_id = u.id WHERE uw.workspace_id = $1 AND u.type != 'api_key') +
+			(SELECT COUNT(*) FROM workspace_invitations WHERE workspace_id = $1 AND expires_at > NOW())
+	`
+	var count int
+	err := r.systemDB.QueryRowContext(ctx, query, workspaceID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count workspace members and invitations: %w", err)
+	}
+	return count, nil
+}
+
+// CountWorkspaces returns the total number of workspaces in the system.
+func (r *workspaceRepository) CountWorkspaces(ctx context.Context) (int, error) {
+	var count int
+	err := r.systemDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM workspaces").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count workspaces: %w", err)
+	}
+	return count, nil
+}
+
 // GetWorkspaceUsersWithEmail returns all users for a workspace including email information
 func (r *workspaceRepository) GetWorkspaceUsersWithEmail(ctx context.Context, workspaceID string) ([]*domain.UserWorkspaceWithEmail, error) {
 	query := `
-		SELECT uw.user_id, uw.workspace_id, uw.role, uw.permissions, uw.created_at, uw.updated_at, u.email, u.type
+		SELECT uw.user_id, uw.workspace_id, uw.role, uw.permissions, uw.created_at, uw.updated_at, u.email, u.type, u.language
 		FROM user_workspaces uw
 		JOIN users u ON uw.user_id = u.id
 		WHERE uw.workspace_id = $1
@@ -661,6 +687,7 @@ func (r *workspaceRepository) GetWorkspaceUsersWithEmail(ctx context.Context, wo
 			&uw.UpdatedAt,
 			&uw.Email,
 			&uw.Type,
+			&uw.Language,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user workspace with email: %w", err)

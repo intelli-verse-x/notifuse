@@ -21,6 +21,7 @@ type NodeExecutionResult struct {
 	NextNodeID  *string                        // Which node to go to next (nil = completed)
 	ScheduledAt *time.Time                     // When to process next (nil = now)
 	Status      domain.ContactAutomationStatus // New status (active, completed, exited)
+	ExitReason  *string                        // Why contact exited (e.g., "unsubscribed", "bounced")
 	Context     map[string]interface{}         // Updated context
 	Output      map[string]interface{}         // Output for node execution log
 	Error       error                          // Error if failed
@@ -144,12 +145,13 @@ func parseDelayNodeConfig(config map[string]interface{}) (*domain.DelayNodeConfi
 
 // EmailNodeExecutor executes email nodes
 type EmailNodeExecutor struct {
-	emailQueueRepo domain.EmailQueueRepository
-	templateRepo   domain.TemplateRepository
-	workspaceRepo  domain.WorkspaceRepository
-	listRepo       domain.ListRepository
-	apiEndpoint    string
-	logger         logger.Logger
+	emailQueueRepo  domain.EmailQueueRepository
+	templateRepo    domain.TemplateRepository
+	workspaceRepo   domain.WorkspaceRepository
+	listRepo        domain.ListRepository
+	contactListRepo domain.ContactListRepository
+	apiEndpoint     string
+	logger          logger.Logger
 }
 
 // NewEmailNodeExecutor creates a new email node executor
@@ -158,22 +160,35 @@ func NewEmailNodeExecutor(
 	templateRepo domain.TemplateRepository,
 	workspaceRepo domain.WorkspaceRepository,
 	listRepo domain.ListRepository,
+	contactListRepo domain.ContactListRepository,
 	apiEndpoint string,
 	log logger.Logger,
 ) *EmailNodeExecutor {
 	return &EmailNodeExecutor{
-		emailQueueRepo: emailQueueRepo,
-		templateRepo:   templateRepo,
-		workspaceRepo:  workspaceRepo,
-		listRepo:       listRepo,
-		apiEndpoint:    apiEndpoint,
-		logger:         log,
+		emailQueueRepo:  emailQueueRepo,
+		templateRepo:    templateRepo,
+		workspaceRepo:   workspaceRepo,
+		listRepo:        listRepo,
+		contactListRepo: contactListRepo,
+		apiEndpoint:     apiEndpoint,
+		logger:          log,
 	}
 }
 
 // NodeType returns the node type this executor handles
 func (e *EmailNodeExecutor) NodeType() domain.NodeType {
 	return domain.NodeTypeEmail
+}
+
+// isSubscriptionSensitiveCategory returns true for template categories
+// that should respect contact unsubscribe status (marketing content).
+func isSubscriptionSensitiveCategory(category string) bool {
+	switch domain.TemplateCategory(category) {
+	case domain.TemplateCategoryMarketing, domain.TemplateCategoryBlog:
+		return true
+	default:
+		return false
+	}
 }
 
 // Execute processes an email node by enqueuing to the email queue
@@ -229,14 +244,57 @@ func (e *EmailNodeExecutor) Execute(ctx context.Context, params NodeExecutionPar
 		return nil, fmt.Errorf("failed to get template: %w", err)
 	}
 
+	// 4b. Check subscription status for marketing/blog emails
+	if isSubscriptionSensitiveCategory(template.Category) && params.Automation.ListID != "" {
+		contactList, clErr := e.contactListRepo.GetContactListByIDs(
+			ctx,
+			params.WorkspaceID,
+			params.ContactData.Email,
+			params.Automation.ListID,
+		)
+		if clErr != nil {
+			// "Not found" means contact is not in list — proceed with sending
+			if _, ok := clErr.(*domain.ErrContactListNotFound); !ok {
+				return nil, fmt.Errorf("failed to check contact subscription status: %w", clErr)
+			}
+		} else {
+			// Contact found in list — check status
+			switch contactList.Status {
+			case domain.ContactListStatusUnsubscribed,
+				domain.ContactListStatusBounced,
+				domain.ContactListStatusComplained:
+				exitReason := string(contactList.Status)
+				e.logger.WithFields(map[string]interface{}{
+					"workspace_id":      params.WorkspaceID,
+					"automation_id":     params.Automation.ID,
+					"contact_email":     params.ContactData.Email,
+					"template_id":       config.TemplateID,
+					"list_id":           params.Automation.ListID,
+					"contact_status":    exitReason,
+					"template_category": template.Category,
+				}).Info("Email node skipped - contact not subscribed for marketing email")
+
+				return &NodeExecutionResult{
+					NextNodeID: nil,
+					Status:     domain.ContactAutomationStatusExited,
+					ExitReason: &exitReason,
+					Output: buildNodeOutput(domain.NodeTypeEmail, map[string]interface{}{
+						"template_id":    config.TemplateID,
+						"skipped":        true,
+						"skip_reason":    exitReason,
+						"contact_status": exitReason,
+						"to":             params.ContactData.Email,
+					}),
+				}, nil
+			}
+		}
+	}
+
 	// 5. Generate message ID
 	messageID := fmt.Sprintf("%s_%s", params.WorkspaceID, uuid.New().String())
 
-	// 6. Setup tracking settings
-	endpoint := e.apiEndpoint
-	if workspace.Settings.CustomEndpointURL != nil && *workspace.Settings.CustomEndpointURL != "" {
-		endpoint = *workspace.Settings.CustomEndpointURL
-	}
+	// 6. Setup tracking settings — custom endpoint if set, else the API endpoint.
+	endpoint := workspace.Settings.ResolveEndpoint(e.apiEndpoint)
 
 	trackingSettings := notifuse_mjml.TrackingSettings{
 		Endpoint:       endpoint,
@@ -261,11 +319,12 @@ func (e *EmailNodeExecutor) Execute(ctx context.Context, params NodeExecutionPar
 	}
 
 	templateData, err := domain.BuildTemplateData(domain.TemplateDataRequest{
-		WorkspaceID:        params.WorkspaceID,
-		WorkspaceSecretKey: workspace.Settings.SecretKey,
-		ContactWithList:    domain.ContactWithList{Contact: params.ContactData, ListID: listID, ListName: listName},
-		MessageID:          messageID,
-		TrackingSettings:   trackingSettings,
+		WorkspaceID:         params.WorkspaceID,
+		WorkspaceSecretKey:  workspace.Settings.SecretKey,
+		WorkspaceWebsiteURL: workspace.Settings.WebsiteURL,
+		ContactWithList:     domain.ContactWithList{Contact: params.ContactData, ListID: listID, ListName: listName},
+		MessageID:           messageID,
+		TrackingSettings:    trackingSettings,
 		ProvidedData: domain.MapOfAny{
 			"automation_id":   params.Automation.ID,
 			"automation_name": params.Automation.Name,

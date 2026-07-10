@@ -57,6 +57,8 @@ func (h *WorkspaceHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/workspaces.removeMember", requireAuth(http.HandlerFunc(h.handleRemoveMember)))
 	mux.Handle("/api/workspaces.deleteInvitation", requireAuth(http.HandlerFunc(h.handleDeleteInvitation)))
 	mux.Handle("/api/workspaces.setUserPermissions", requireAuth(http.HandlerFunc(h.handleSetUserPermissions)))
+	mux.Handle("/api/workspaces.setCustomFieldLabels", requireAuth(http.HandlerFunc(h.handleSetCustomFieldLabels)))
+	mux.Handle("/api/workspaces.setBlogSettings", requireAuth(http.HandlerFunc(h.handleSetBlogSettings)))
 
 	// Public invitation routes (no authentication required)
 	mux.Handle("/api/workspaces.verifyInvitationToken", http.HandlerFunc(h.handleVerifyInvitationToken))
@@ -148,6 +150,11 @@ func (h *WorkspaceHandler) handleCreate(w http.ResponseWriter, r *http.Request) 
 		req.Settings.Languages,
 	)
 	if err != nil {
+		var limitErr *domain.ErrWorkspaceLimitReached
+		if errors.As(err, &limitErr) {
+			WriteJSONError(w, limitErr.Error(), http.StatusForbidden)
+			return
+		}
 		if err.Error() == "workspace already exists" {
 			WriteJSONError(w, "Workspace already exists", http.StatusConflict)
 		} else {
@@ -299,6 +306,11 @@ func (h *WorkspaceHandler) handleInviteMember(w http.ResponseWriter, r *http.Req
 	// Create the invitation or add the user directly if they already exist
 	invitation, token, err := h.workspaceService.InviteMember(r.Context(), req.WorkspaceID, req.Email, req.Permissions)
 	if err != nil {
+		var limitErr *domain.ErrTeamMemberLimitReached
+		if errors.As(err, &limitErr) {
+			WriteJSONError(w, limitErr.Error(), http.StatusForbidden)
+			return
+		}
 		h.logger.WithField("workspace_id", req.WorkspaceID).WithField("email", req.Email).WithField("error", err.Error()).Error("Failed to invite member")
 		WriteJSONError(w, "Failed to invite member", http.StatusInternalServerError)
 		return
@@ -365,6 +377,86 @@ func (h *WorkspaceHandler) handleSetUserPermissions(w http.ResponseWriter, r *ht
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "success",
 		"message": "User permissions updated successfully",
+	})
+}
+
+func (h *WorkspaceHandler) handleSetCustomFieldLabels(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req domain.SetCustomFieldLabelsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteJSONError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	workspaceID, labels, err := req.Validate()
+	if err != nil {
+		WriteJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.workspaceService.SetCustomFieldLabels(r.Context(), workspaceID, labels); err != nil {
+		if _, ok := err.(*domain.PermissionError); ok {
+			WriteJSONError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		if _, ok := err.(*domain.ErrUnauthorized); ok {
+			WriteJSONError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		h.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to set custom field labels")
+		WriteJSONError(w, "Failed to set custom field labels", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "success",
+		"message": "Custom field labels updated successfully",
+	})
+}
+
+// handleSetBlogSettings handles the request to set workspace blog settings (the
+// enable flag plus title/SEO/pagination/feed config) via the dedicated, blog:write
+// gated endpoint. Unlike workspaces.update (owner-only), this lets a member with
+// blog:write manage blog configuration.
+func (h *WorkspaceHandler) handleSetBlogSettings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req domain.SetBlogSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteJSONError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	workspaceID, enabled, settings, err := req.Validate()
+	if err != nil {
+		WriteJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.workspaceService.SetBlogSettings(r.Context(), workspaceID, enabled, settings); err != nil {
+		if _, ok := err.(*domain.PermissionError); ok {
+			WriteJSONError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		if _, ok := err.(*domain.ErrUnauthorized); ok {
+			WriteJSONError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		h.logger.WithField("workspace_id", workspaceID).WithField("error", err.Error()).Error("Failed to set blog settings")
+		WriteJSONError(w, "Failed to set blog settings", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "success",
+		"message": "Blog settings updated successfully",
 	})
 }
 
@@ -676,6 +768,11 @@ func (h *WorkspaceHandler) handleAcceptInvitation(w http.ResponseWriter, r *http
 	// Process the invitation acceptance
 	authResponse, err := h.workspaceService.AcceptInvitation(r.Context(), invitationID, workspaceID, email)
 	if err != nil {
+		var limitErr *domain.ErrTeamMemberLimitReached
+		if errors.As(err, &limitErr) {
+			WriteJSONError(w, limitErr.Error(), http.StatusForbidden)
+			return
+		}
 		h.logger.WithField("invitation_id", invitationID).WithField("workspace_id", workspaceID).WithField("email", email).WithField("error", err.Error()).Error("Failed to accept invitation")
 		WriteJSONError(w, "Failed to accept invitation", http.StatusInternalServerError)
 		return

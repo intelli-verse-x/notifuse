@@ -2,6 +2,160 @@
 
 All notable changes to this project will be documented in this file.
 
+## [32.3] - 2026-06-01
+
+- **Security**: Broadcast data-feed endpoints (`broadcasts.refreshGlobalFeed`, `broadcasts.testRecipientFeed`) are no longer a server-side request forgery (SSRF) vector and now require `broadcasts:write`. The data-feed fetcher used a plain HTTP client with no address validation, so any authenticated workspace member — including a read-only member — could make the server fetch an arbitrary URL (internal services, the private network, or the cloud instance metadata endpoint) and read back the JSON response. The fetcher now uses the SSRF-safe client already used for favicon detection (dial-time rejection of private/loopback/link-local/reserved ranges, redirect re-validation, DNS-rebinding protection), and both service methods enforce the same write permission as broadcast creation. Trusted self-hosted deployments that intentionally fetch feeds from their internal network can opt out with `BROADCAST_DATA_FEED_ALLOW_PRIVATE_HOSTS=true`.
+- **Security**: All broadcast operations now enforce workspace permissions. Previously only create/get/refresh/test were permission-checked, so any workspace member — including a read-only member — could update, delete, schedule, pause, resume, cancel, send, and select A/B winners for broadcasts. Mutating operations now require `broadcasts:write` and listing/test-results require `broadcasts:read`; unauthorized requests receive `403 Forbidden`.
+- **Fix**: The task scheduler now executes due tasks in-process when the internal scheduler is enabled (`TASK_SCHEDULER_ENABLED`), instead of dispatching them over HTTP to its own `/api/tasks.execute` endpoint. In single-instance deployments where the app cannot reach its own public URL (e.g. a pod that is itself the load balancer's backend), the self-call failed with `connection refused` and left `send_broadcast` and other tasks stuck `pending`; HTTP fan-out is still used when the scheduler is disabled (external cron).
+- **Fix**: Selecting a different email node in the automation editor now refreshes the config panel — the shared template selector (`TemplateSelectorInput`) cached the first template it resolved and ignored later changes to its controlled `value`, so switching between email nodes kept showing (and appearing to edit) the first node's template (#353).
+- **Fix**: Test emails sent from the template editor now honor the template's Reply-To — the `transactional.testTemplate` path built the message from the modal's options only and never fell back to the template's `reply_to`, so test emails arrived without a `Reply-To` header (real automation/broadcast/transactional sends were already unaffected); an explicit Reply-To from the modal's Advanced options still takes precedence (#355).
+- **Fix**: Workspace members with the `workspace` write permission ("full access") can now manage contact custom field labels. Previously both the Settings → Custom Fields controls and the underlying save were gated to workspace **owners** only, so full-access members had no way to add or edit field labels (#354). Custom field labels are now managed via a dedicated, permission-checked endpoint `POST /api/workspaces.setCustomFieldLabels` (granular `workspace:write` instead of owner role), mirroring the template-blocks pattern. As a side effect, `workspaces.update` no longer writes custom field labels — so an owner saving general settings can no longer clobber labels set by a member.
+- **Fix**: Workspace members with the `blog` write permission can now manage blog settings — enabling the blog and editing its title, SEO, pagination, and feed configuration. Previously both the Settings → Blog editor and the underlying save were gated to workspace **owners** only, so a delegated "blog manager" granted `blog:write` could publish posts and themes but could not enable the blog or change its settings. Blog settings are now managed via a dedicated, permission-checked endpoint `POST /api/workspaces.setBlogSettings` (granular `blog:write` instead of owner role), mirroring the custom-field-labels pattern. As a side effect, `workspaces.update` no longer writes blog settings — so an owner saving general settings can no longer clobber blog config set by a member.
+- **Fix**: Broadcasts to a double opt-in list no longer reach contacts who never confirmed — recipients whose `contact_list` status is `pending` are now excluded from both the recipient count and the send (#344).
+- **Fix**: Typing into a button's text editor in the email builder no longer puts each character on its own line — StarterKit's `TrailingNode` was enabled in the button's paragraph-less inline schema, where it falls back to `hardBreak` and appended a `<br>` after every keystroke; it is now disabled for the inline editor (#352).
+- **Improvement**: `{{ workspace.base_url }}` / `{{ workspace.website_url }}` now render in the template preview — the `/api/templates.compile` endpoint injects the workspace object server-side (filling only missing keys, so historical message snapshots are preserved), so any API consumer gets it, not just the console, and the Preview tab no longer renders `website_url` as empty (#342).
+- **Refactor**: Extracted shared `WorkspaceSettings.ResolveEndpoint` and `BuildWorkspaceTemplateVars` helpers, replacing ~8 duplicated copies of the tracking-endpoint resolution and `workspace` template-object construction across the send and preview paths.
+
+## [32.2] - 2026-05-31
+
+- **Feature**: Exposed `{{ workspace.website_url }}` in email templates — the workspace's public Website URL (trailing slash trimmed), distinct from `{{ workspace.base_url }}` (the tracking endpoint) — so templates can compose application links like `{{ workspace.website_url }}/users/verify/xxx` instead of pointing at the tracking domain (#342).
+
+## [32.1] - 2026-05-29
+
+- **Feature**: Exposed `{{ workspace.base_url }}` in email templates — the resolved Custom Endpoint URL (or the default API endpoint), trailing slash trimmed — so templates can compose links from relative paths like `{{ workspace.base_url }}/users/verify/xxx` (#342).
+- **Security**: Bumped `liquidjs` to 10.27.0 in console to clear 6 Dependabot alerts (critical RCE, ReDoS in `strip_html`, `date` filter padding DoS, `{% render %}` `ownPropertyOnly` bypass, empty `{% for %}` renderLimit bypass, and `strip_html` newline XSS); `npm audit fix` also cleared transitive `brace-expansion` and `ws` advisories.
+- **Fix**: Mailgun webhook registration no longer fails with `400` on domains shared with other services — Notifuse now merges its callback URL into each event's existing URL set via `PUT` (up to Mailgun's limit of 3 per event) instead of always `POST`ing, and unregistering removes only its own URL while preserving other consumers' (#340).
+
+## [32.0] - 2026-05-22
+
+### Database Schema Changes
+
+- Migration v32.0 adds a `language` column (`VARCHAR(10) NOT NULL DEFAULT 'en'`) to the system `users` table. Existing users default to English.
+
+### Features
+
+- **Feature**: System emails and the console UI are now localized per user. Each user has a `language` preference — one of `en`, `fr`, `es`, `de`, `ca`, `pt-BR`, `ja`, `it` — that drives both their console UI locale and the language of the system emails (authentication code, workspace invitation, broadcast circuit-breaker alert) sent to them. The language is changed from the console language switcher and persisted via the new `POST /api/user.updateLanguage` endpoint. Magic-code emails use the recipient's language, circuit-breaker alerts use each owner's language, and workspace invitations use the inviter's language.
+
+## [31.0] - 2026-05-19
+
+### Database Schema Changes
+
+- Migration v31.0 updates the `queue_contact_for_segment_recomputation` trigger function on every workspace database to short-circuit when the inserted `contact_timeline` row is itself a segment membership event (`kind IN ('segment.joined', 'segment.left')`).
+
+### Fixes
+
+- **Fix**: `queue_contact_for_segment_recomputation` trigger no longer re-enqueues contacts when the inserted `contact_timeline` event is itself a segment membership change (`segment.joined`/`segment.left`). Removes a self-loop where every membership write re-queued the same contact.
+- **Fix**: Recurring tasks dispatched via HTTP now write `timeout_after` in UTC. The column is `TIMESTAMP WITHOUT TIME ZONE` and the scheduler compares it against `time.Now().UTC()`; on non-UTC hosts the local-time value caused the task to appear "still running" for the host's UTC offset. Same fix applied to the broadcast-pause `next_run_after`.
+- **Fix**: `GetWorkspaceConnection`'s pool health check now uses an isolated context for `pool.PingContext` instead of the caller's. A caller-context cancellation no longer triggers pool eviction.
+
+## [30.3] - 2026-05-14
+
+- **Fix**: UTM parameters (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`) were dropped from tracked links when click tracking was enabled — the encrypted `/r/` redirect token embedded the raw destination URL instead of the UTM-augmented one. The UTM parameters are now preserved in the redirect target.
+
+## [30.2] - 2026-05-13
+
+- **Fix**: SES `4.4.7 Message expired` (retry-exhaustion) now suppresses on the first event, and any recipient that accumulates 5 consecutive soft bounces with no successful delivery in between is also suppressed; `MessageTooLarge`/`ContentRejected`/`AttachmentRejected` never count (#323).
+- **Fix**: Email AI Assistant `setEmailTree` tool now declares `items` on its `children` array schema, so OpenAI-compatible providers no longer reject the request with `array schema missing items` (#324). Anthropic was already lenient about this; only OpenAI-compatible endpoints surfaced the error.
+- **Improvement**: `/api/templates.compile` now accepts and returns `subject` and `subject_preview`, rendered through the same Liquid engine used at send time. Previously the API only returned `mjml`/`html`, so the console preview drawer rendered the subject in-browser with `liquidjs`, which could diverge from the Go-side `liquidgo` output used by the send pipeline. Any API consumer can now retrieve the rendered subject directly (#329).
+- **Deps**: Bumped `liquidjs` to 10.25.7, `postcss` to 8.5.14, `fast-xml-parser` override to ≥5.8.0 (+ new `fast-xml-builder` ≥1.1.7 override), and `github.com/prometheus/prometheus` to v0.311.3.
+
+## [30.1] - 2026-04-27
+
+- **Security**: Bumped `go.opentelemetry.io/otel` to v1.41.0 in `telemetry/go.mod` (CVE-2026-29181).
+- **Deps**: Bumped `gomjml` to v0.12.0.
+
+### Breaking Changes
+
+- **SMTP auth with `SMTP_USE_TLS=false`**: When TLS is explicitly disabled, the SMTP client now uses `PLAIN-NOENC` (go-mail's `SMTPAuthPlainNoEnc`) explicitly instead of `SMTPAuthAutoDiscover`. Previously, go-mail's auto-discover refused `PLAIN`/`LOGIN` over an unencrypted connection (only `SCRAM-SHA-*` and `CRAM-MD5` were tried), and `SMTPAuthPlain` itself also refused unencrypted connections at the AUTH step. `PLAIN-NOENC` bypasses both gates while sending the standard `AUTH PLAIN` command on the wire, so any server that advertises `AUTH PLAIN` (e.g. local maddy/Mailpit relays) accepts it. Operators who have set `SMTP_USE_TLS=false` have already accepted plaintext credential transit, so forcing `PLAIN` aligns with their stated intent. **Action**: none if your relay accepts `PLAIN`. If your relay only accepts `SCRAM`/`CRAM-MD5`, you must enable TLS (`SMTP_USE_TLS=true`) — auto-discover continues to apply when TLS is on.
+
+## [30.0] - 2026-04-23
+
+### Breaking Changes
+
+- **Webhooks**: Signatures now conform to the [Standard Webhooks](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md) specification and match the published verification code in the docs (#318)
+  - Stored secrets are now prefixed with `whsec_` and the 32 random bytes after the prefix are base64-decoded before use as the HMAC key (previously the 44-char base64 string was used directly as raw bytes, making the published Python/JS/Go/PHP verification snippets always fail)
+  - V30 migration rotates every existing webhook secret to the new format. Subscriptions, URLs, event filters, enabled state, and delivery history are preserved; only the secret value changes
+  - **Consumer action required**: copy the new `whsec_…` secret from the console into your environment and update your verification code to the spec-compliant form shown in the docs. Deliveries that fire during the gap will retry automatically once the consumer's secret is updated
+
+### Data migration
+
+- **Timezone**: `Europe/Kiev` is rewritten to the IANA-canonical `Europe/Kyiv` across `workspaces.settings`, `contacts.timezone`, `segments.timezone`, and `broadcasts.schedule.timezone`. Stored `Europe/Kiev` continued to resolve at runtime via Go's tzdata alias, but the console dropdown (which no longer lists the obsolete name) showed an empty selection for affected rows. The `contacts` triggers are briefly disabled around the rename so it does not emit `contact.updated` webhook events or fill `contact_timeline` with rename entries.
+
+### Other changes
+
+- **Task dispatch no longer swallowed by auth proxies (#320, #317)**: The scheduler's internal `POST /api/tasks.execute` client now refuses to follow redirects (`CheckRedirect = http.ErrUseLastResponse`). Previously, an auth-walling reverse proxy (Cloudflare Access, Authelia, oauth2-proxy, Traefik Forward Auth, etc.) sitting in front of the API could respond with a 302 to its login page; Go's default `http.Client` followed the redirect as a GET, the login page returned 200 OK HTML, and the dispatcher logged "dispatched successfully" while the task never ran. The 302 is now surfaced in the non-200 branch (with the `Location` header logged) so the misconfiguration is loud instead of silent. **Operator note**: if your ingress performs an HTTP→HTTPS redirect on the API path, set `$API_ENDPOINT` to the final HTTPS URL — the dispatch client will no longer silently upgrade it.
+- **Task scheduler**: Scheduler tick no longer waits on in-flight HTTP dispatches, so one slow recurring task can't delay dispatch of others on the same tick. Stale tasks left in `running` with an expired `timeout_after` are now reclaimed by `MarkAsRunningTx` on a subsequent tick instead of looping on 409 indefinitely (#317).
+- **Task dispatch observability**: The scheduler-side "Task execution request dispatched successfully" log now includes the HTTP `status_code`, and `tasks.execute` logs an entry line on the handler side. Diffing the two streams makes any remaining silent-interception failure mode visible.
+- **Feature**: Added AWS region `eu-central-2` (Europe, Zurich) to the S3 provider and integrations region selectors (#316).
+
+## [29.5] - 2026-04-20
+
+- **Feature**: Pause, resume, and cancel broadcasts mid-delivery — even after the orchestrator has finished enqueueing — and cancel is now allowed from the Processing state (#303)
+- **Contacts**: Added in-table bulk actions (multi-select delete, add to list, remove from list, unsubscribe) with progress modal and "Skipped" tagging for no-op cases (#299)
+
+## [29.4] - 2026-04-15
+
+- **Feature**: Added `SMTP_BRIDGE_TLS` setting (`off` / `starttls` / `implicit`) to let operators run the SMTP bridge behind a TLS-terminating reverse proxy or in implicit-TLS (SMTPS) mode (#314)
+- **Feature**: Blog RSS 2.0 and JSON Feed 1.1 syndication — automatic `/feed.xml` and `/feed.json` endpoints per workspace, per-category feeds, conditional GET with ETag, gzip, XSS-sanitized content, autodiscovery `<link>` tags, and admin-configurable feed settings
+- **i18n**: Notification center confirmation banner (subscribe/unsubscribe result) is now translated in all supported languages instead of always showing English (#315)
+- **Security**: Bumped transitive `github.com/prometheus/prometheus` from v0.35.0 to v0.311.2 to clear Dependabot alert for CVE-2026-40179 (stored XSS in Prometheus web UI; Notifuse only imports `model/value`, so it was not exploitable)
+
+## [29.3] - 2026-04-12
+
+- **Fix**: Double opt-in confirmation link now correctly transitions contacts from Pending to Active instead of resending the confirmation email in a loop (#313)
+
+## [29.2] - 2026-04-08
+
+- **Feature**: Added OpenAI as LLM provider alongside Anthropic — supports any OpenAI-compatible endpoint (OpenRouter, Ollama, vLLM, LiteLLM, Azure, etc.) via custom base URL, with full streaming and tool use support
+- **Security**: Updated liquidjs to 10.25.5 in console and vitest to 3.2.4 in notification center to fix 5 Dependabot vulnerabilities
+- **Deps**: Updated @vitejs/plugin-react to 5.2.0 in console and notification center
+- **Feature**: Added System Settings drawer for root admin to view and edit system configuration from the dashboard
+- **Workspace**: Enforce workspace creation limits via `MAX_WORKSPACES` env var (0 = unlimited), with "upgrade your plan" messaging in the console
+- **Improvement**: Email open tracking now works independently of click tracking — added Cache-Control headers to prevent proxy caching, encrypted tracking URLs (`/t/`, `/r/`) to avoid pixel blocker detection, and padded tracking pixel (#307)
+- **i18n**: Added Polish language support to the notification center
+
+## [29.1] - 2026-04-07
+
+- **Security**: Upgraded Vite to 7.3.2 in console and notification center to fix arbitrary file read via WebSocket (CVE-2026-39363)
+- **Fix**: Removed invalid `visibility` attribute from MJML section output that caused template compilation errors (#305)
+- **Fix**: Automation now exits when contact is unsubscribed/bounced/complained for marketing emails, while still allowing transactional emails to be sent (#304)
+- **Fix**: Social media buttons now link directly to pages by default instead of wrapping URLs in share prompts; added "Share link" toggle to social element settings (#306)
+
+## [29.0] - 2026-04-04
+
+### Breaking Changes
+
+- **Rename**: "SMTP Relay" renamed to "SMTP Bridge" throughout the application
+  - Environment variables: `SMTP_RELAY_*` renamed to `SMTP_BRIDGE_*` (old names still accepted for backward compatibility)
+  - Database settings keys migrated automatically via V29 migration
+  - JSON API: `smtp_relay_*` fields renamed to `smtp_bridge_*` in setup endpoints
+  - Frontend routes: `/settings/smtp-relay` changed to `/settings/smtp-bridge`
+  - UI labels: "SMTP Relay" changed to "SMTP Bridge"
+
+- **Workspace**: Enforce team member limits via `MAX_USERS` env var (0 = unlimited), with checks on invite, accept invitation, and direct add — API key users are excluded from the count
+
+- **Security**: Fixed SSRF vulnerability in `/api/detect-favicon` endpoint by adding a safe HTTP client with private IP blocking, DNS rebinding protection, scheme validation, and response size limits
+- **Security**: Upgraded happy-dom to 20.8.9 in notification center and picomatch to 4.0.4 in console
+- **Improvement**: SMTP EHLO hostname now defaults to the from-email domain instead of the SMTP host, improving compatibility with strict providers (#301)
+- **Security**: Updated lodash/lodash-es to 4.18.x, brace-expansion to 5.0.5, and yaml to 2.8.3 to fix prototype pollution, code injection, ReDoS, and stack overflow vulnerabilities
+
+## [28.4] - 2026-03-27
+
+- **Security**: Upgraded picomatch to 4.0.4 in notification center
+- **Contacts**: Fixed dropdown menu becoming unresponsive after deleting contacts, and pagination state now persists in URL across page refreshes (#294)
+- **Templates**: Test emails now load the full contact record, so Liquid variables like `{{ contact.first_name }}` render correctly
+
+## [28.3] - 2026-03-20
+
+- **Security**: Upgraded google.golang.org/grpc to v1.79.3
+- **Security**: Upgraded fast-xml-parser to v5.5.8
+
+## [28.2] - 2026-03-17
+
+- **Postmark**: Added configurable Message Stream support, allowing Postmark to be used for both transactional (`outbound`) and broadcast/marketing emails (#289)
+- **Broadcasts**: Fixed MJML code mode templates failing with "template missing content" error when sending broadcasts
+- **Contacts**: Fixed `/api/contacts.list` rejecting partial email searches with "invalid email format" error. The `email` filter now accepts partial strings for substring matching as intended (#292)
+
 ## [28.1] - 2026-03-09
 
 - **Transactional Emails**: Added `subject_preview` override to `email_options`, allowing dynamic email preheader text per API call with Liquid templating support

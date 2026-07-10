@@ -186,14 +186,14 @@ NOTE: IDs are auto-generated - you don't need to specify them when adding blocks
     {
       "type": "mj-social-element",
       "attributes": {
-        "name": "facebook",
+        "name": "facebook-noshare",
         "href": "https://facebook.com/yourpage"
       }
     },
     {
       "type": "mj-social-element",
       "attributes": {
-        "name": "x",
+        "name": "x-noshare",
         "href": "https://x.com/yourhandle"
       }
     }
@@ -222,6 +222,7 @@ The content supports Liquid template variables:
 - {{ contact.first_name }} - Contact's first name
 - {{ contact.last_name }} - Contact's last name
 - {{ contact.email }} - Contact's email
+- {{ workspace.base_url }} - Workspace base URL (compose links as {{ workspace.base_url }}/path)
 - {{ unsubscribe_url }} - Unsubscribe link
 - {{ notification_center_url }} - Notification preferences link
 

@@ -580,12 +580,8 @@ func (s *TransactionalNotificationService) SendNotification(
 		// Prepare message data with contact and custom data
 		notification.TrackingSettings.EnableTracking = workspace.Settings.EmailTrackingEnabled
 
-		// Use workspace CustomEndpointURL if provided, otherwise use the default API endpoint
-		if workspace.Settings.CustomEndpointURL != nil && *workspace.Settings.CustomEndpointURL != "" {
-			notification.TrackingSettings.Endpoint = *workspace.Settings.CustomEndpointURL
-		} else {
-			notification.TrackingSettings.Endpoint = s.apiEndpoint
-		}
+		// Resolve the tracking/base endpoint: custom endpoint if set, else the API endpoint.
+		notification.TrackingSettings.Endpoint = workspace.Settings.ResolveEndpoint(s.apiEndpoint)
 
 		notification.TrackingSettings.WorkspaceID = workspaceID
 		notification.TrackingSettings.MessageID = messageID
@@ -595,13 +591,14 @@ func (s *TransactionalNotificationService) SendNotification(
 		}
 
 		req := domain.TemplateDataRequest{
-			WorkspaceID:        workspace.ID,
-			WorkspaceSecretKey: workspace.Settings.SecretKey,
-			ContactWithList:    contactWithList,
-			MessageID:          messageID,
-			ProvidedData:       params.Data,
-			TrackingSettings:   notification.TrackingSettings,
-			Broadcast:          nil,
+			WorkspaceID:         workspace.ID,
+			WorkspaceSecretKey:  workspace.Settings.SecretKey,
+			WorkspaceWebsiteURL: workspace.Settings.WebsiteURL,
+			ContactWithList:     contactWithList,
+			MessageID:           messageID,
+			ProvidedData:        params.Data,
+			TrackingSettings:    notification.TrackingSettings,
+			Broadcast:           nil,
 		}
 		templateData, err := domain.BuildTemplateData(req)
 		if err != nil {
@@ -751,10 +748,17 @@ func (s *TransactionalNotificationService) TestTemplate(ctx context.Context, wor
 		return fmt.Errorf("failed to upsert contact: %s", contactOperation.Error)
 	}
 
-	contactWithList := domain.ContactWithList{
-		Contact: &domain.Contact{
+	// Get the full contact record (same pattern as SendNotification)
+	contact, err := s.contactService.GetContactByEmail(ctx, workspaceID, recipientEmail)
+	if err != nil {
+		// Fallback to minimal contact - test emails should still work
+		contact = &domain.Contact{
 			Email: recipientEmail,
-		},
+		}
+	}
+
+	contactWithList := domain.ContactWithList{
+		Contact:  contact,
 		ListID:   "foo",
 		ListName: "bar",
 	}
@@ -762,11 +766,8 @@ func (s *TransactionalNotificationService) TestTemplate(ctx context.Context, wor
 	// Use fixed messageID for testing
 	messageID := uuid.New().String()
 
-	// Use workspace CustomEndpointURL if provided, otherwise use the default API endpoint
-	endpoint := s.apiEndpoint
-	if workspace.Settings.CustomEndpointURL != nil && *workspace.Settings.CustomEndpointURL != "" {
-		endpoint = *workspace.Settings.CustomEndpointURL
-	}
+	// Resolve the tracking/base endpoint: custom endpoint if set, else the API endpoint.
+	endpoint := workspace.Settings.ResolveEndpoint(s.apiEndpoint)
 
 	trackingSettings := notifuse_mjml.TrackingSettings{
 		EnableTracking: true,
@@ -776,13 +777,14 @@ func (s *TransactionalNotificationService) TestTemplate(ctx context.Context, wor
 	}
 
 	req := domain.TemplateDataRequest{
-		WorkspaceID:        workspace.ID,
-		WorkspaceSecretKey: workspace.Settings.SecretKey,
-		ContactWithList:    contactWithList,
-		MessageID:          messageID,
-		TrackingSettings:   trackingSettings,
-		Broadcast:          nil,
-		ProvidedData:       template.TestData,
+		WorkspaceID:         workspace.ID,
+		WorkspaceSecretKey:  workspace.Settings.SecretKey,
+		WorkspaceWebsiteURL: workspace.Settings.WebsiteURL,
+		ContactWithList:     contactWithList,
+		MessageID:           messageID,
+		TrackingSettings:    trackingSettings,
+		Broadcast:           nil,
+		ProvidedData:        template.TestData,
 	}
 	messageData, err := domain.BuildTemplateData(req)
 
@@ -835,6 +837,11 @@ func (s *TransactionalNotificationService) TestTemplate(ctx context.Context, wor
 			return fmt.Errorf("failed to process subject override with Liquid: %w", err)
 		}
 		processedSubject = overrideSubject
+	}
+
+	// Fall back to the template's reply-to; an explicit one still wins
+	if emailOptions.ReplyTo == "" && emailContent.ReplyTo != "" {
+		emailOptions.ReplyTo = emailContent.ReplyTo
 	}
 
 	// Create SendEmailProviderRequest

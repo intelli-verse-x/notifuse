@@ -51,6 +51,7 @@ export interface UpdateLanguageResponse {
 export const authService = {
   signIn: (data: SignInRequest) => api.post<SignInResponse>('/api/user.signin', data),
   verifyCode: (data: VerifyCodeRequest) => api.post<VerifyResponse>('/api/user.verify', data),
+  consoleSkipLogin: () => api.post<VerifyResponse>('/api/user.consoleSkipLogin', {}),
   getCurrentUser: () => api.get<GetCurrentUserResponse>('/api/user.me'),
   logout: () => api.post<LogoutResponse>('/api/user.logout', {}),
   updateLanguage: (language: string) =>

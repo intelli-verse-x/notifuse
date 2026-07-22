@@ -23,6 +23,7 @@ type UserServiceInterface interface {
 	SignIn(ctx context.Context, input domain.SignInInput) (string, error)
 	VerifyCode(ctx context.Context, input domain.VerifyCodeInput) (*domain.AuthResponse, error)
 	RootSignin(ctx context.Context, input domain.RootSigninInput) (*domain.AuthResponse, error)
+	ConsoleSkipLoginSignin(ctx context.Context) (*domain.AuthResponse, error)
 	VerifyUserSession(ctx context.Context, userID string, sessionID string) (*domain.User, error)
 	GetUserByID(ctx context.Context, userID string) (*domain.User, error)
 	UpdateUserLanguage(ctx context.Context, userID string, language string) error
@@ -190,6 +191,41 @@ func (h *UserHandler) RootSignIn(w http.ResponseWriter, r *http.Request) {
 	// Set user ID in span once we have it
 	if response != nil && response.User.ID != "" {
 		span.AddAttributes(trace.StringAttribute("user.id", response.User.ID))
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// ConsoleSkipLogin issues a root session when CONSOLE_SKIP_LOGIN is enabled.
+// This removes magic-code email login for private admin deployments.
+func (h *UserHandler) ConsoleSkipLogin(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.tracer.StartSpan(r.Context(), "UserHandler.ConsoleSkipLogin")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		WriteJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeInvalidArgument,
+			Message: "Method not allowed",
+		})
+		return
+	}
+
+	if h.config == nil || !h.config.ConsoleSkipLogin {
+		WriteJSONError(w, "Console skip-login is not enabled", http.StatusForbidden)
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodePermissionDenied,
+			Message: "Console skip-login disabled",
+		})
+		return
+	}
+
+	response, err := h.userService.ConsoleSkipLoginSignin(ctx)
+	if err != nil {
+		WriteJSONError(w, err.Error(), http.StatusUnauthorized)
+		h.tracer.MarkSpanError(ctx, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -377,6 +413,7 @@ func (h *UserHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/user.signin", h.SignIn)
 	mux.HandleFunc("/api/user.verify", h.VerifyCode)
 	mux.HandleFunc("/api/user.rootSignin", h.RootSignIn)
+	mux.HandleFunc("/api/user.consoleSkipLogin", h.ConsoleSkipLogin)
 
 	// Create auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(h.getJWTSecret)

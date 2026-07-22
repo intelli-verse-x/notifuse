@@ -39,6 +39,10 @@ type Config struct {
 	IsInstalled         bool // NEW: Indicates if setup wizard has been completed
 	MaxUsers            int  // 0 = unlimited (backward compat for self-hosted)
 	MaxWorkspaces       int  // 0 = unlimited (backward compat for self-hosted)
+	// ConsoleSkipLogin skips magic-code console login and issues a root session
+	// automatically. Intended for private/admin deployments where SMTP login is
+	// unavailable or undesired. Keep false on publicly reachable instances.
+	ConsoleSkipLogin bool
 
 	// Track which values came from actual environment variables (not database, not generated)
 	EnvValues EnvValues
@@ -367,6 +371,9 @@ func LoadWithOptions(opts LoadOptions) (*Config, error) {
 
 	// Set default values
 	v.SetDefault("SERVER_PORT", 8080)
+	// Private IntelliVerse deployments skip console magic-code login by default.
+	// Set CONSOLE_SKIP_LOGIN=false to re-enable email magic-code sign-in.
+	v.SetDefault("CONSOLE_SKIP_LOGIN", true)
 	v.SetDefault("SERVER_HOST", "0.0.0.0")
 	v.SetDefault("DB_HOST", "localhost")
 	v.SetDefault("DB_PORT", 5432)
@@ -837,16 +844,17 @@ func LoadWithOptions(opts LoadOptions) (*Config, error) {
 			BatchSize: v.GetInt("AUTOMATION_SCHEDULER_BATCH_SIZE"),
 		},
 
-		RootEmail:       rootEmail,
-		Environment:     v.GetString("ENVIRONMENT"),
-		APIEndpoint:     apiEndpoint,
-		WebhookEndpoint: v.GetString("WEBHOOK_ENDPOINT"),
-		LogLevel:        v.GetString("LOG_LEVEL"),
-		Version:         v.GetString("VERSION"),
-		IsInstalled:     isInstalled,
-		MaxUsers:        v.GetInt("MAX_USERS"),
-		MaxWorkspaces:   v.GetInt("MAX_WORKSPACES"),
-		EnvValues:       envVals, // Store env values for setup service
+		RootEmail:        rootEmail,
+		Environment:      v.GetString("ENVIRONMENT"),
+		APIEndpoint:      apiEndpoint,
+		WebhookEndpoint:  v.GetString("WEBHOOK_ENDPOINT"),
+		LogLevel:         v.GetString("LOG_LEVEL"),
+		Version:          v.GetString("VERSION"),
+		IsInstalled:      isInstalled,
+		MaxUsers:         v.GetInt("MAX_USERS"),
+		MaxWorkspaces:    v.GetInt("MAX_WORKSPACES"),
+		ConsoleSkipLogin: v.GetBool("CONSOLE_SKIP_LOGIN"),
+		EnvValues:        envVals, // Store env values for setup service
 	}
 
 	if config.WebhookEndpoint == "" {

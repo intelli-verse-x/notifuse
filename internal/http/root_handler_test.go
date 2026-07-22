@@ -40,6 +40,7 @@ func TestNewRootHandler(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -66,6 +67,7 @@ func TestRootHandler_Handle(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -108,6 +110,7 @@ func TestRootHandler_RegisterRoutes(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -156,6 +159,7 @@ func TestRootHandler_RegisterRoutesWithNotificationCenter(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -197,6 +201,7 @@ func TestRootHandler_ServeConfigJS(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -253,6 +258,7 @@ func TestRootHandler_Handle_ConfigJS(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -312,6 +318,7 @@ func TestRootHandler_ServeNotificationCenter(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -389,6 +396,7 @@ func TestRootHandler_ServeConsole(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -482,6 +490,7 @@ func TestRootHandler_Handle_Comprehensive(t *testing.T) {
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		nil, // blogService
 		nil, // cache
@@ -600,6 +609,7 @@ func TestRootHandler_CacheIntegration(t *testing.T) {
 			"",
 			0,
 			"off",
+			false, // consoleSkipLogin
 			nil, // workspaceRepo
 			nil, // blogService
 			nil, // cache - nil is allowed
@@ -667,6 +677,7 @@ func setupBlogHandlerTest(t *testing.T) (*mocks.MockBlogService, *pkgmocks.MockL
 		"",
 		0,
 		"off",
+		false, // consoleSkipLogin
 		nil, // workspaceRepo
 		mockBlogService,
 		testCache,

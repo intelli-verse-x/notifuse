@@ -78,6 +78,9 @@ type UserServiceInterface interface {
 	SignIn(ctx context.Context, input SignInInput) (string, error)
 	VerifyCode(ctx context.Context, input VerifyCodeInput) (*AuthResponse, error)
 	RootSignin(ctx context.Context, input RootSigninInput) (*AuthResponse, error)
+	// ConsoleSkipLoginSignin issues a root session without magic-code email.
+	// Only call when ConsoleSkipLogin is enabled on the server.
+	ConsoleSkipLoginSignin(ctx context.Context) (*AuthResponse, error)
 	VerifyUserSession(ctx context.Context, userID string, sessionID string) (*User, error)
 	GetUserByID(ctx context.Context, userID string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)

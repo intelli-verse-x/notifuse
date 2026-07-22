@@ -1083,6 +1083,7 @@ func (a *App) InitHandlers() error {
 		a.config.SMTPBridge.Domain,
 		a.config.SMTPBridge.Port,
 		a.config.SMTPBridge.TLSMode,
+		a.config.ConsoleSkipLogin,
 		a.workspaceRepo,
 		a.blogService,
 		a.blogCache,
@@ -1643,6 +1644,10 @@ func (a *App) Initialize() error {
 		a.logger.Info("Setup wizard required - installation not complete")
 	} else {
 		a.logger.Info("System installation verified")
+	}
+
+	if a.config.ConsoleSkipLogin {
+		a.logger.Warn("CONSOLE_SKIP_LOGIN is enabled — console opens as root without magic-code email. Set CONSOLE_SKIP_LOGIN=false to require sign-in.")
 	}
 
 	// Initialize dedicated blog cache

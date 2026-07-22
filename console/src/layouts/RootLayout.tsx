@@ -27,8 +27,14 @@ export function RootLayout() {
   const shouldRedirectToSetup = !isInstalled && !isSetupRoute
 
   // If not authenticated and not on public routes, redirect to signin
+  // (skipped when CONSOLE_SKIP_LOGIN is enabled — AuthProvider auto-issues a root session)
   const shouldRedirectToSignin =
-    !isLogoutRoute && !isSigninRoute && !isAuthenticated && !isPublicRoute && !shouldRedirectToSetup
+    window.CONSOLE_SKIP_LOGIN !== true &&
+    !isLogoutRoute &&
+    !isSigninRoute &&
+    !isAuthenticated &&
+    !isPublicRoute &&
+    !shouldRedirectToSetup
 
   // If authenticated and has no workspaces, redirect to workspace creation
   const shouldRedirectToCreateWorkspace =

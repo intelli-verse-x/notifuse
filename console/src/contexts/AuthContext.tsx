@@ -29,22 +29,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const checkAuth = useCallback(async () => {
-    // console.log('checkAuth')
     try {
-      // Check if a token exists in localStorage
+      // Private deployments can skip magic-code login and open the console directly.
+      if (!localStorage.getItem('auth_token') && window.CONSOLE_SKIP_LOGIN === true) {
+        const response = await authService.consoleSkipLogin()
+        if (response.token) {
+          localStorage.setItem('auth_token', response.token)
+        }
+      }
+
       const token = localStorage.getItem('auth_token')
       if (!token) {
         setLoading(false)
         return
       }
 
-      // Token exists, fetch current user data
       const { user, workspaces } = await authService.getCurrentUser()
       setUser(user)
       setWorkspaces(workspaces)
       setLoading(false)
     } catch {
-      // If there's an error (like an expired token), clear the storage
       localStorage.removeItem('auth_token')
       setUser(null)
       setWorkspaces([])
@@ -53,23 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // Check for existing session on component mount
     void checkAuth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const signin = async (token: string) => {
-    // console.log('signin')
     try {
-      // Store token in localStorage for persistence
       localStorage.setItem('auth_token', token)
 
-      // Fetch current user data using the token
       const { user, workspaces } = await authService.getCurrentUser()
       setUser(user)
       setWorkspaces(workspaces)
     } catch (error) {
-      // If there's an error, clear the storage
       localStorage.removeItem('auth_token')
       throw error
     }
@@ -77,27 +76,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signout = async () => {
     try {
-      // Call backend to invalidate all sessions
       await authService.logout()
     } catch (error) {
-      // Even if backend call fails, we still logout locally
       console.error('Failed to logout on backend:', error)
     }
 
-    // Remove token from localStorage
     localStorage.removeItem('auth_token')
-
-    // Clear user data
     setUser(null)
     setWorkspaces([])
+
+    // Re-open console automatically when skip-login is enabled.
+    if (window.CONSOLE_SKIP_LOGIN === true) {
+      await checkAuth()
+    }
   }
 
   const refreshWorkspaces = async () => {
     const { workspaces } = await authService.getCurrentUser()
     setWorkspaces(workspaces)
   }
-
-  // console.log('user', user)
 
   return (
     <AuthContext.Provider

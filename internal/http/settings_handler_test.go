@@ -39,6 +39,10 @@ func (m *mockUserServiceForSettings) RootSignin(ctx context.Context, input domai
 	return nil, nil
 }
 
+func (m *mockUserServiceForSettings) ConsoleSkipLoginSignin(ctx context.Context) (*domain.AuthResponse, error) {
+	return nil, nil
+}
+
 func (m *mockUserServiceForSettings) VerifyUserSession(ctx context.Context, userID string, sessionID string) (*domain.User, error) {
 	return nil, nil
 }

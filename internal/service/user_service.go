@@ -325,6 +325,63 @@ func (s *UserService) RootSignin(ctx context.Context, input domain.RootSigninInp
 	}, nil
 }
 
+// ConsoleSkipLoginSignin issues a root session without magic-code email or HMAC.
+// The HTTP handler must only expose this when ConsoleSkipLogin is enabled.
+func (s *UserService) ConsoleSkipLoginSignin(ctx context.Context) (*domain.AuthResponse, error) {
+	ctx, span := s.tracer.StartServiceSpan(ctx, "UserService", "ConsoleSkipLoginSignin")
+	defer span.End()
+
+	if s.rootEmail == "" {
+		err := fmt.Errorf("root email is not configured")
+		s.tracer.MarkSpanError(ctx, err)
+		return nil, err
+	}
+
+	if s.rateLimiter != nil && !s.rateLimiter.Allow("signin", s.rootEmail) {
+		s.logger.WithField("email", s.rootEmail).Warn("Console skip-login rate limit exceeded")
+		s.tracer.AddAttribute(ctx, "error", "rate_limit_exceeded")
+		s.tracer.MarkSpanError(ctx, fmt.Errorf("rate limit exceeded"))
+		return nil, fmt.Errorf("too many sign-in attempts, please try again in a few minutes")
+	}
+
+	user, err := s.repo.GetUserByEmail(ctx, s.rootEmail)
+	if err != nil {
+		s.logger.WithField("email", s.rootEmail).WithField("error", err.Error()).Error("Console skip-login root user not found")
+		s.tracer.MarkSpanError(ctx, err)
+		return nil, fmt.Errorf("root user not found")
+	}
+
+	s.tracer.AddAttribute(ctx, "user.id", user.ID)
+
+	expiresAt := time.Now().Add(s.sessionExpiry)
+	session := &domain.Session{
+		ID:        generateID(),
+		UserID:    user.ID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.repo.CreateSession(ctx, session); err != nil {
+		s.logger.WithField("user_id", user.ID).WithField("error", err.Error()).Error("Failed to create session for console skip-login")
+		s.tracer.MarkSpanError(ctx, err)
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	token := s.authService.GenerateUserAuthToken(user, session.ID, expiresAt)
+
+	if s.rateLimiter != nil {
+		s.rateLimiter.Reset("signin", s.rootEmail)
+	}
+
+	s.logger.WithField("user_id", user.ID).WithField("email", user.Email).Info("Root user signed in via console skip-login")
+
+	return &domain.AuthResponse{
+		Token:     token,
+		User:      *user,
+		ExpiresAt: expiresAt,
+	}, nil
+}
+
 func (s *UserService) generateMagicCode() string {
 	// Generate a 6-digit code
 	code := make([]byte, 3)

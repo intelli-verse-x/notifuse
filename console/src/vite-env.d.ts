@@ -10,6 +10,7 @@ declare global {
     SMTP_BRIDGE_DOMAIN: string
     SMTP_BRIDGE_PORT: number
     SMTP_BRIDGE_TLS_MODE: 'off' | 'starttls' | 'implicit'
+    CONSOLE_SKIP_LOGIN: boolean
   }
 }
 

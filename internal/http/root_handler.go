@@ -29,6 +29,7 @@ type RootHandler struct {
 	smtpBridgeDomain      string
 	smtpBridgePort        int
 	smtpBridgeTLSMode     string // "off", "starttls", or "implicit"
+	consoleSkipLogin      bool
 	workspaceRepo         domain.WorkspaceRepository
 	blogService           domain.BlogService
 	cache                 cache.Cache
@@ -47,6 +48,7 @@ func NewRootHandler(
 	smtpBridgeDomain string,
 	smtpBridgePort int,
 	smtpBridgeTLSMode string,
+	consoleSkipLogin bool,
 	workspaceRepo domain.WorkspaceRepository,
 	blogService domain.BlogService,
 	cache cache.Cache,
@@ -63,6 +65,7 @@ func NewRootHandler(
 		smtpBridgeDomain:      smtpBridgeDomain,
 		smtpBridgePort:        smtpBridgePort,
 		smtpBridgeTLSMode:     smtpBridgeTLSMode,
+		consoleSkipLogin:      consoleSkipLogin,
 		workspaceRepo:         workspaceRepo,
 		blogService:           blogService,
 		cache:                 cache,
@@ -145,8 +148,13 @@ func (h *RootHandler) serveConfigJS(w http.ResponseWriter, r *http.Request) {
 		smtpBridgeEnabledStr = "true"
 	}
 
+	consoleSkipLoginStr := "false"
+	if h.consoleSkipLogin {
+		consoleSkipLoginStr = "true"
+	}
+
 	configJS := fmt.Sprintf(
-		"window.API_ENDPOINT = %q;\nwindow.VERSION = %q;\nwindow.ROOT_EMAIL = %q;\nwindow.IS_INSTALLED = %s;\nwindow.TIMEZONES = %s;\nwindow.SMTP_BRIDGE_ENABLED = %s;\nwindow.SMTP_BRIDGE_DOMAIN = %q;\nwindow.SMTP_BRIDGE_PORT = %d;\nwindow.SMTP_BRIDGE_TLS_MODE = %q;",
+		"window.API_ENDPOINT = %q;\nwindow.VERSION = %q;\nwindow.ROOT_EMAIL = %q;\nwindow.IS_INSTALLED = %s;\nwindow.TIMEZONES = %s;\nwindow.SMTP_BRIDGE_ENABLED = %s;\nwindow.SMTP_BRIDGE_DOMAIN = %q;\nwindow.SMTP_BRIDGE_PORT = %d;\nwindow.SMTP_BRIDGE_TLS_MODE = %q;\nwindow.CONSOLE_SKIP_LOGIN = %s;",
 		h.apiEndpoint,
 		h.version,
 		h.rootEmail,
@@ -156,6 +164,7 @@ func (h *RootHandler) serveConfigJS(w http.ResponseWriter, r *http.Request) {
 		h.smtpBridgeDomain,
 		h.smtpBridgePort,
 		h.smtpBridgeTLSMode,
+		consoleSkipLoginStr,
 	)
 	_, _ = w.Write([]byte(configJS))
 }

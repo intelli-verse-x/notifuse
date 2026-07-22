@@ -9,7 +9,7 @@ import { useLingui } from '@lingui/react/macro'
 
 export function SignInPage() {
   const { t } = useLingui()
-  const { signin } = useAuth()
+  const { signin, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const search = useSearch({ from: '/console/signin' })
   const [email, setEmail] = useState('')
@@ -19,6 +19,13 @@ export function SignInPage() {
   const { message } = App.useApp()
   const [form] = Form.useForm()
   const hasAutoSubmitted = useRef(false)
+
+  // When console skip-login is enabled, bounce off the sign-in page.
+  useEffect(() => {
+    if (window.CONSOLE_SKIP_LOGIN === true || isAuthenticated) {
+      navigate({ to: '/console', replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const handleCodeSubmit = useCallback(
     async (values: { code: string }, emailToUse?: string) => {

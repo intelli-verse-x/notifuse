@@ -94,6 +94,21 @@ func (mr *MockUserServiceInterfaceMockRecorder) RootSignin(arg0, arg1 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RootSignin", reflect.TypeOf((*MockUserServiceInterface)(nil).RootSignin), arg0, arg1)
 }
 
+// ConsoleSkipLoginSignin mocks base method.
+func (m *MockUserServiceInterface) ConsoleSkipLoginSignin(arg0 context.Context) (*domain.AuthResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConsoleSkipLoginSignin", arg0)
+	ret0, _ := ret[0].(*domain.AuthResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ConsoleSkipLoginSignin indicates an expected call of ConsoleSkipLoginSignin.
+func (mr *MockUserServiceInterfaceMockRecorder) ConsoleSkipLoginSignin(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsoleSkipLoginSignin", reflect.TypeOf((*MockUserServiceInterface)(nil).ConsoleSkipLoginSignin), arg0)
+}
+
 // SignIn mocks base method.
 func (m *MockUserServiceInterface) SignIn(arg0 context.Context, arg1 domain.SignInInput) (string, error) {
 	m.ctrl.T.Helper()

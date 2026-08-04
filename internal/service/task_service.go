@@ -853,19 +853,19 @@ func (s *TaskService) handleBroadcastScheduled(ctx context.Context, payload doma
 			s.logger.WithFields(map[string]interface{}{
 				"broadcast_id": broadcastID,
 				"task_id":      existingTask.ID,
-			}).Info("Task already exists for broadcast, updating status")
+			}).Info("Task already exists for broadcast, updating NextRunAfter")
+
+			// Ensure BroadcastID is set
+			if existingTask.BroadcastID == nil {
+				broadcastIDCopy := broadcastID
+				existingTask.BroadcastID = &broadcastIDCopy
+			}
 
 			if sendNow && status == string(domain.BroadcastStatusProcessing) {
 				// If broadcast is being sent immediately, mark task as pending and set next run to now
-				nextRunAfter := time.Now()
+				nextRunAfter := time.Now().UTC()
 				existingTask.NextRunAfter = &nextRunAfter
 				existingTask.Status = domain.TaskStatusPending
-
-				// Ensure BroadcastID is set
-				if existingTask.BroadcastID == nil {
-					broadcastIDCopy := broadcastID
-					existingTask.BroadcastID = &broadcastIDCopy
-				}
 
 				if updateErr := s.repo.Update(txCtx, payload.WorkspaceID, existingTask); updateErr != nil {
 					tracing.MarkSpanError(txCtx, updateErr)
@@ -879,6 +879,36 @@ func (s *TaskService) handleBroadcastScheduled(ctx context.Context, payload doma
 
 				// Flag for immediate execution after transaction commits
 				shouldExecuteImmediately = true
+				return nil
+			}
+
+			// Reschedule path: existing task must move to the new scheduled_time.
+			// Previously we returned without updating NextRunAfter — schedule UI
+			// and cron time drifted (e.g. UI said Aug 4, task still Aug 5).
+			if scheduledTimeStr, hasTime := payload.Data["scheduled_time"].(string); hasTime && scheduledTimeStr != "" {
+				if scheduledTime, parseErr := time.Parse(time.RFC3339, scheduledTimeStr); parseErr == nil {
+					nextRun := scheduledTime.UTC()
+					existingTask.NextRunAfter = &nextRun
+					existingTask.Status = domain.TaskStatusPending
+					tracing.AddAttribute(txCtx, "next_run_after", nextRun.Format(time.RFC3339))
+					tracing.AddAttribute(txCtx, "scheduled_time_source", "payload_reschedule")
+
+					if updateErr := s.repo.Update(txCtx, payload.WorkspaceID, existingTask); updateErr != nil {
+						tracing.MarkSpanError(txCtx, updateErr)
+						s.logger.WithFields(map[string]interface{}{
+							"broadcast_id": broadcastID,
+							"task_id":      existingTask.ID,
+							"error":        updateErr.Error(),
+						}).Error("Failed to reschedule existing send_broadcast task")
+						return updateErr
+					}
+				} else {
+					s.logger.WithFields(map[string]interface{}{
+						"broadcast_id":   broadcastID,
+						"scheduled_time": scheduledTimeStr,
+						"parse_error":    parseErr.Error(),
+					}).Warn("Could not parse scheduled_time while rescheduling existing task")
+				}
 			}
 
 			return nil

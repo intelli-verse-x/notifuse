@@ -185,6 +185,9 @@ func (s *BroadcastService) UpdateBroadcast(ctx context.Context, request *domain.
 		return nil, err
 	}
 
+	// Snapshot schedule before Validate mutates existingBroadcast in place
+	previousSchedule := existingBroadcast.Schedule
+
 	// Validate and update broadcast fields
 	updatedBroadcast, err := request.Validate(existingBroadcast)
 	if err != nil {
@@ -202,9 +205,88 @@ func (s *BroadcastService) UpdateBroadcast(ctx context.Context, request *domain.
 		return nil, err
 	}
 
+	// Keep send_broadcast task NextRunAfter in sync with schedule changes.
+	// broadcasts.update used to only rewrite schedule JSON — cron still fired
+	// on the old task time (schedule UI said day X, mail went day Y).
+	if scheduleSettingsChanged(previousSchedule, updatedBroadcast.Schedule) {
+		if syncErr := s.syncScheduledSendTask(ctx, request.WorkspaceID, updatedBroadcast); syncErr != nil {
+			s.logger.WithFields(map[string]interface{}{
+				"broadcast_id": updatedBroadcast.ID,
+				"workspace_id": request.WorkspaceID,
+				"error":        syncErr.Error(),
+			}).Error("Failed to sync send task after broadcast schedule update")
+			return nil, fmt.Errorf("broadcast saved but send task schedule sync failed: %w", syncErr)
+		}
+	}
+
 	s.logger.Info("Broadcast updated successfully")
 
 	return updatedBroadcast, nil
+}
+
+func scheduleSettingsChanged(before, after domain.ScheduleSettings) bool {
+	return before.IsScheduled != after.IsScheduled ||
+		before.ScheduledDate != after.ScheduledDate ||
+		before.ScheduledTime != after.ScheduledTime ||
+		before.Timezone != after.Timezone ||
+		before.UseRecipientTimezone != after.UseRecipientTimezone
+}
+
+// syncScheduledSendTask moves the pending/paused send_broadcast task to match
+// the broadcast schedule. No-op when not scheduled or no task exists.
+func (s *BroadcastService) syncScheduledSendTask(ctx context.Context, workspaceID string, bcast *domain.Broadcast) error {
+	if s.taskRepo == nil || bcast == nil {
+		return nil
+	}
+
+	task, err := s.taskRepo.GetTaskByBroadcastID(ctx, workspaceID, bcast.ID)
+	if err != nil {
+		// No task yet (draft never scheduled) — nothing to sync
+		s.logger.WithField("broadcast_id", bcast.ID).Debug("No send task to sync after schedule update")
+		return nil
+	}
+
+	if task.Status != domain.TaskStatusPending && task.Status != domain.TaskStatusPaused {
+		s.logger.WithFields(map[string]interface{}{
+			"broadcast_id": bcast.ID,
+			"task_id":      task.ID,
+			"status":       string(task.Status),
+		}).Info("Skipping send-task schedule sync for non-pending task")
+		return nil
+	}
+
+	if !bcast.Schedule.IsScheduled {
+		return nil
+	}
+
+	scheduledTime, parseErr := bcast.Schedule.ParseScheduledDateTime()
+	if parseErr != nil {
+		return fmt.Errorf("invalid schedule after update: %w", parseErr)
+	}
+	if scheduledTime.IsZero() {
+		return nil
+	}
+
+	// Store UTC — tasks.next_run_after is TIMESTAMP WITHOUT TIME ZONE
+	nextRun := scheduledTime.UTC()
+	task.NextRunAfter = &nextRun
+	task.Status = domain.TaskStatusPending
+	if task.BroadcastID == nil {
+		idCopy := bcast.ID
+		task.BroadcastID = &idCopy
+	}
+
+	if updateErr := s.taskRepo.Update(ctx, workspaceID, task); updateErr != nil {
+		return updateErr
+	}
+
+	s.logger.WithFields(map[string]interface{}{
+		"broadcast_id":   bcast.ID,
+		"task_id":        task.ID,
+		"next_run_after": nextRun.Format(time.RFC3339),
+	}).Info("Synced send_broadcast task NextRunAfter to broadcast schedule")
+
+	return nil
 }
 
 // ListBroadcasts retrieves a list of broadcasts with pagination

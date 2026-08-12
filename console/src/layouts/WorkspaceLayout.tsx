@@ -415,18 +415,27 @@ export function WorkspaceLayout() {
           >
             <div
               style={{
-                padding: '16px 0 16px 27px',
-                textAlign: 'center',
-                borderBottom: '1px solid #f0f0f0'
+                // Tight header: no card chrome — wordmark sits on sidebar bg
+                padding: collapsed ? '12px 0' : '12px 16px 10px 20px',
+                textAlign: 'left',
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start'
               }}
             >
               <img
                 src={collapsed ? '/console/icon.png' : '/console/logo.png'}
-                alt=""
+                alt="Mail Studio"
                 style={{
-                  height: '31px',
+                  // Transparent wordmark (no white box in asset); ~40px reads
+                  // clearly next to 13px menu without dominating the sider.
+                  height: collapsed ? '28px' : '40px',
                   width: 'auto',
-                  transition: 'height 0.2s'
+                  maxWidth: collapsed ? '28px' : '180px',
+                  objectFit: 'contain',
+                  display: 'block',
+                  transition: 'height 0.2s, max-width 0.2s'
                 }}
               />
             </div>

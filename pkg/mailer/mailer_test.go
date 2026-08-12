@@ -143,7 +143,7 @@ func TestValidatingMailer_SendWorkspaceInvitation(t *testing.T) {
 		SMTPUsername: "username",
 		SMTPPassword: "password",
 		FromEmail:    "noreply@example.com",
-		FromName:     "Notifuse",
+		FromName:     "Mail Studio",
 		APIEndpoint:  "https://example.com",
 	}
 
@@ -276,7 +276,7 @@ func TestConsoleMailer_SendMagicCode(t *testing.T) {
 	expectedStrings := []string{
 		"AUTHENTICATION MAGIC CODE",
 		"To: test@example.com",
-		"Subject: Your Notifuse authentication code",
+		"Subject: Your Mail Studio authentication code",
 		"123456",
 	}
 
@@ -302,7 +302,7 @@ func TestSMTPMailer_SendWorkspaceInvitation(t *testing.T) {
 		SMTPUsername: "username",
 		SMTPPassword: "password",
 		FromEmail:    "noreply@example.com",
-		FromName:     "Notifuse",
+		FromName:     "Mail Studio",
 		APIEndpoint:  baseURL,
 	}
 
@@ -389,7 +389,7 @@ func TestSMTPMailer_WithEdgeCases(t *testing.T) {
 				SMTPUsername: "username",
 				SMTPPassword: "password",
 				FromEmail:    "noreply@example.com",
-				FromName:     "Notifuse",
+				FromName:     "Mail Studio",
 				APIEndpoint:  tc.baseURL,
 			}
 
@@ -443,7 +443,7 @@ func TestNewSMTPMailer(t *testing.T) {
 		SMTPUsername: "username",
 		SMTPPassword: "password",
 		FromEmail:    "noreply@example.com",
-		FromName:     "Notifuse",
+		FromName:     "Mail Studio",
 		APIEndpoint:  "https://notifuse.example.com",
 	}
 
@@ -480,7 +480,7 @@ func TestMailerConfig(t *testing.T) {
 				SMTPUsername: "username",
 				SMTPPassword: "password",
 				FromEmail:    "noreply@example.com",
-				FromName:     "Notifuse",
+				FromName:     "Mail Studio",
 				APIEndpoint:  "https://notifuse.example.com",
 			},
 			validate: func(t *testing.T, config *Config) {
@@ -551,7 +551,7 @@ func TestSMTPMailer_SendMagicCode(t *testing.T) {
 		SMTPUsername: "username",
 		SMTPPassword: "password",
 		FromEmail:    "noreply@example.com",
-		FromName:     "Notifuse",
+		FromName:     "Mail Studio",
 		APIEndpoint:  baseURL,
 	}
 
@@ -570,7 +570,7 @@ func TestSMTPMailer_SendMagicCode(t *testing.T) {
 	expectedLogLines := []string{
 		"Sending magic code to: " + email,
 		"From: " + config.FromName + " <" + config.FromEmail + ">",
-		"Subject: Your Notifuse authentication code",
+		"Subject: Your Mail Studio authentication code",
 		"Code: " + code,
 	}
 
@@ -628,7 +628,7 @@ func TestConsoleMailer_SendCircuitBreakerAlert(t *testing.T) {
 		"🚨 Broadcast Automatically Paused",
 		"Your broadcast \"" + broadcastName + "\" in workspace " + workspaceName,
 		"Reason: " + reason,
-		"Best regards,\nThe Notifuse Team",
+		"Best regards,\nThe Mail Studio Team",
 	}
 
 	for _, expected := range expectedStrings {
@@ -652,7 +652,7 @@ func TestSMTPMailer_SendCircuitBreakerAlert(t *testing.T) {
 		SMTPUsername: "username",
 		SMTPPassword: "password",
 		FromEmail:    "noreply@example.com",
-		FromName:     "Notifuse",
+		FromName:     "Mail Studio",
 		APIEndpoint:  "https://notifuse.example.com",
 	}
 
@@ -727,7 +727,7 @@ func TestSMTPMailer_SendCircuitBreakerAlert_EdgeCases(t *testing.T) {
 				SMTPUsername: "username",
 				SMTPPassword: "password",
 				FromEmail:    "noreply@example.com",
-				FromName:     "Notifuse",
+				FromName:     "Mail Studio",
 				APIEndpoint:  "https://example.com",
 			}
 
@@ -762,7 +762,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "username",
 			SMTPPassword: "password",
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 		}
 
@@ -784,7 +784,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "username",
 			SMTPPassword: "password",
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 		}
 
@@ -810,7 +810,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "", // No username
 			SMTPPassword: "", // No password
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 		}
 
@@ -835,7 +835,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "", // No username
 			SMTPPassword: "", // No password
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 		}
 
@@ -857,7 +857,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "username",
 			SMTPPassword: "password",
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 			UseTLS:       true,
 		}
@@ -880,7 +880,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "",
 			SMTPPassword: "",
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 			UseTLS:       false,
 		}
@@ -903,7 +903,7 @@ func TestSMTPMailer_createSMTPClient(t *testing.T) {
 			SMTPUsername: "username",
 			SMTPPassword: "password",
 			FromEmail:    "noreply@example.com",
-			FromName:     "Notifuse",
+			FromName:     "Mail Studio",
 			APIEndpoint:  "https://example.com",
 		}
 
@@ -924,7 +924,7 @@ func TestSMTPMailer_LocalizedSubjects(t *testing.T) {
 		SMTPHost:    "smtp.example.com",
 		SMTPPort:    587,
 		FromEmail:   "noreply@example.com",
-		FromName:    "Notifuse",
+		FromName:    "Mail Studio",
 		APIEndpoint: "https://notifuse.example.com",
 	}
 	mailer := NewTestSMTPMailer(config)
@@ -937,14 +937,14 @@ func TestSMTPMailer_LocalizedSubjects(t *testing.T) {
 		{
 			name:            "magic code",
 			send:            func() error { return mailer.SendMagicCode("user@example.com", "123456", "fr") },
-			expectedSubject: "Subject: Votre code d'authentification Notifuse",
+			expectedSubject: "Subject: Votre code d'authentification Mail Studio",
 		},
 		{
 			name: "workspace invitation",
 			send: func() error {
 				return mailer.SendWorkspaceInvitation("user@example.com", "Mon Espace", "Alice", "tok", "fr")
 			},
-			expectedSubject: "Subject: Vous avez été invité à rejoindre Mon Espace sur Notifuse",
+			expectedSubject: "Subject: Vous avez été invité à rejoindre Mon Espace sur Mail Studio",
 		},
 		{
 			name: "circuit breaker alert",
@@ -974,7 +974,7 @@ func TestSMTPMailer_UnknownLanguageFallsBackToEnglish(t *testing.T) {
 		SMTPHost:    "smtp.example.com",
 		SMTPPort:    587,
 		FromEmail:   "noreply@example.com",
-		FromName:    "Notifuse",
+		FromName:    "Mail Studio",
 		APIEndpoint: "https://notifuse.example.com",
 	}
 	mailer := NewTestSMTPMailer(config)
@@ -984,7 +984,7 @@ func TestSMTPMailer_UnknownLanguageFallsBackToEnglish(t *testing.T) {
 			t.Fatalf("Expected no error, got %v", err)
 		}
 	})
-	if !strings.Contains(logOutput, "Subject: Your Notifuse authentication code") {
+	if !strings.Contains(logOutput, "Subject: Your Mail Studio authentication code") {
 		t.Errorf("Expected English subject fallback, got: %s", logOutput)
 	}
 }
@@ -999,11 +999,11 @@ func TestConsoleMailer_LocalizedContent(t *testing.T) {
 	})
 
 	expectedStrings := []string{
-		"Subject: Votre code d'authentification Notifuse",
+		"Subject: Votre code d'authentification Mail Studio",
 		"Bonjour,",
-		"Votre code d'authentification pour Notifuse est :",
+		"Votre code d'authentification pour Mail Studio est :",
 		"123456",
-		"L'équipe Notifuse",
+		"L'équipe Mail Studio",
 	}
 	for _, expected := range expectedStrings {
 		if !strings.Contains(output, expected) {

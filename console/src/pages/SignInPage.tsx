@@ -91,7 +91,7 @@ export function SignInPage() {
       emailToUse = search.email
     } else if ((window as unknown as Record<string, unknown>).demo === true) {
       // Demo mode fallback
-      emailToUse = 'demo@notifuse.com'
+      emailToUse = 'demo@mailstudio.local'
     }
 
     if (emailToUse) {

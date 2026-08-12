@@ -384,7 +384,7 @@ func LoadWithOptions(opts LoadOptions) (*Config, error) {
 	v.SetDefault("VERSION", VERSION)
 
 	// SMTP defaults
-	v.SetDefault("SMTP_FROM_NAME", "Notifuse")
+	v.SetDefault("SMTP_FROM_NAME", "Mail Studio")
 
 	// SMTP Bridge defaults (formerly SMTP Relay)
 	// NOTE: Don't set default for SMTP_BRIDGE_ENABLED - we need to detect when it's truly unset
@@ -643,7 +643,7 @@ func LoadWithOptions(opts LoadOptions) (*Config, error) {
 			smtpConfig.FromName = systemSettings.SMTPFromName
 		}
 		if smtpConfig.FromName == "" {
-			smtpConfig.FromName = "Notifuse" // Default
+			smtpConfig.FromName = "Mail Studio" // Default
 		}
 		// Use database value for TLS if env var is not set
 		if envVals.SMTPUseTLS == "" {
@@ -706,7 +706,7 @@ func LoadWithOptions(opts LoadOptions) (*Config, error) {
 			smtpConfig.Port = 587
 		}
 		if smtpConfig.FromName == "" {
-			smtpConfig.FromName = "Notifuse"
+			smtpConfig.FromName = "Mail Studio"
 		}
 
 		smtpBridgeConfig = SMTPBridgeConfig{

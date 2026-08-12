@@ -24,11 +24,7 @@ export function SMTPBridgeSettings() {
       {window.SMTP_BRIDGE_ENABLED ? (
         <>
           <div style={{ marginBottom: '16px' }}>
-            <a
-              href="https://docs.notifuse.com/concepts/transactional-api#smtp-bridge"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="#" onClick={(e) => e.preventDefault()}>
               {t`View SMTP Bridge documentation and setup guide`}
             </a>
           </div>
@@ -64,11 +60,7 @@ export function SMTPBridgeSettings() {
       ) : (
         <div style={{ color: '#8c8c8c', fontStyle: 'italic' }}>
           {t`SMTP bridge is not configured.`}{' '}
-          <a
-            href="https://docs.notifuse.com/installation#smtp-bridge-configuration"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="#" onClick={(e) => e.preventDefault()}>
             {t`Learn how to enable SMTP bridge`}
           </a>
         </div>

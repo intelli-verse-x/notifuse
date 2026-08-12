@@ -3147,8 +3147,8 @@ msgid "e.g. email"
 msgstr "ex. email"
 
 #: src/components/transactional/UpsertTransactionalNotificationDrawer.tsx:317
-msgid "e.g. notifuse"
-msgstr "ex. notifuse"
+msgid "e.g. mail-studio"
+msgstr "ex. mail-studio"
 
 #: src/components/transactional/UpsertTransactionalNotificationDrawer.tsx:263
 msgid "E.g. Password Reset Email"
@@ -4867,8 +4867,8 @@ msgid "Help & Support"
 msgstr "Aide et support"
 
 #: src/pages/SetupWizard.tsx:533
-msgid "Help us improve Notifuse by sending anonymous usage statistics. No personal data or message content is collected."
-msgstr "Aidez-nous à améliorer Notifuse en envoyant des statistiques d utilisation anonymes. Aucune donnée personnelle ni contenu de message n est collecté."
+msgid "Help us improve Mail Studio by sending anonymous usage statistics. No personal data or message content is collected."
+msgstr "Aidez-nous à améliorer Mail Studio en envoyant des statistiques d utilisation anonymes. Aucune donnée personnelle ni contenu de message n est collecté."
 
 #: src/components/blog_editor/components/image/ImageNodeView.tsx:329
 msgid "Helps screen readers describe the image"
@@ -6864,8 +6864,8 @@ msgid "Per-recipient feed URL is required when enabled"
 msgstr "L'URL du feed par destinataire est requise lorsqu'il est activé"
 
 #: src/pages/SetupWizard.tsx:543
-msgid "Periodically check for new Notifuse versions and security updates. A popup will list new versions available."
-msgstr "Vérifier périodiquement les nouvelles versions de Notifuse et les mises à jour de sécurité. Une popup listera les nouvelles versions disponibles."
+msgid "Periodically check for new Mail Studio versions and security updates. A popup will list new versions available."
+msgstr "Vérifier périodiquement les nouvelles versions de Mail Studio et les mises à jour de sécurité. Une popup listera les nouvelles versions disponibles."
 
 #: src/components/settings/WorkspaceMembers.tsx:130
 #: src/components/settings/WorkspaceMembers.tsx:145
@@ -7400,8 +7400,8 @@ msgid "Public lists are visible in the Notification Center for users to subscrib
 msgstr "Les listes publiques sont visibles dans le centre de notifications pour que les utilisateurs puissent s y abonner"
 
 #: src/pages/SetupWizard.tsx:361
-msgid "Public URL where this Notifuse instance is accessible"
-msgstr "URL publique où cette instance Notifuse est accessible"
+msgid "Public URL where this Mail Studio instance is accessible"
+msgstr "URL publique où cette instance Mail Studio est accessible"
 
 #: src/components/blog/PublishModal.tsx:113
 msgid "Publication"
@@ -10893,8 +10893,8 @@ msgid "Your files can be uploaded to any S3 compatible storage."
 msgstr "Vos fichiers peuvent être téléversés vers n'importe quel stockage compatible S3."
 
 #: src/pages/SetupWizard.tsx:299
-msgid "Your Notifuse instance has been successfully configured."
-msgstr "Votre instance Notifuse a été configurée avec succès."
+msgid "Your Mail Studio instance has been successfully configured."
+msgstr "Votre instance Mail Studio a été configurée avec succès."
 
 #: src/components/broadcasts/UpsertBroadcastDrawer.tsx:616
 msgid "Your website or company name"

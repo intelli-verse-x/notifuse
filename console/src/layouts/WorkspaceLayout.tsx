@@ -544,11 +544,7 @@ export function WorkspaceLayout() {
                     {
                       key: 'docs',
                       label: (
-                        <a
-                          href="https://docs.notifuse.com/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <a href="#" onClick={(e) => e.preventDefault()}>
                           <FontAwesomeIcon icon={faFileLines} className="mr-2" /> {t`Documentation`}
                         </a>
                       )
@@ -556,11 +552,7 @@ export function WorkspaceLayout() {
                     {
                       key: 'report-issue',
                       label: (
-                        <a
-                          href="https://github.com/notifuse/notifuse/issues"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <a href="#" onClick={(e) => e.preventDefault()}>
                           <WarningOutlined className="mr-2" />
                           {t`Report An Issue`}
                         </a>

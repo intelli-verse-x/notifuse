@@ -62,7 +62,7 @@ import { Template } from '../services/api/template'
 import { Template as BroadcastTemplate } from '../services/api/broadcast'
 import Subtitle from '../components/common/subtitle'
 
-const { Title, Paragraph, Text } = Typography
+const { Text } = Typography
 
 // Helper to convert broadcast Template to template Template
 const toTemplateApiType = (template: BroadcastTemplate): Template => {
@@ -428,45 +428,53 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
   }
 
   return (
-    <Card
-      styles={{
-        body: {
-          padding: 0
-        }
-      }}
-      title={
-        <Space size="large">
-          <div>{broadcast.name}</div>
-          <div className="text-xs font-normal">
-            {task ? (
-              <Popover
-                content={taskPopoverContent}
-                title={t`Task Status`}
-                placement="bottom"
-                trigger="hover"
-              >
-                <span className="cursor-help">
+    <div className="mailstudio-card overflow-hidden mb-6">
+      <Card
+        variant="borderless"
+        styles={{
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            padding: '12px 16px'
+          },
+          body: {
+            padding: 0,
+            background: 'transparent'
+          }
+        }}
+        title={
+          <Space size="large" className="min-w-0">
+            <div className="text-slate-100 font-medium truncate">{broadcast.name}</div>
+            <div className="text-xs font-normal shrink-0">
+              {task ? (
+                <Popover
+                  content={taskPopoverContent}
+                  title={t`Task Status`}
+                  placement="bottom"
+                  trigger="hover"
+                >
+                  <span className="cursor-help">
+                    {getStatusBadge(broadcast, remainingTestTime, progressStats, t)}
+                    <FontAwesomeIcon
+                      icon={faCircleQuestion}
+                      style={{ opacity: 0.7 }}
+                      className="ml-2"
+                    />
+                  </span>
+                </Popover>
+              ) : isTaskLoading ? (
+                <span className="text-gray-400">
                   {getStatusBadge(broadcast, remainingTestTime, progressStats, t)}
-                  <FontAwesomeIcon
-                    icon={faCircleQuestion}
-                    style={{ opacity: 0.7 }}
-                    className="ml-2"
-                  />
+                  <FontAwesomeIcon icon={faSpinner} spin className="ml-2" />
                 </span>
-              </Popover>
-            ) : isTaskLoading ? (
-              <span className="text-gray-400">
-                {getStatusBadge(broadcast, remainingTestTime, progressStats, t)}
-                <FontAwesomeIcon icon={faSpinner} spin className="ml-2" />
-              </span>
-            ) : (
-              getStatusBadge(broadcast, remainingTestTime, progressStats, t)
-            )}
-          </div>
-        </Space>
-      }
-      extra={
-        <Space>
+              ) : (
+                getStatusBadge(broadcast, remainingTestTime, progressStats, t)
+              )}
+            </div>
+          </Space>
+        }
+        extra={
+          <Space>
           <Tooltip title={t`Refresh Broadcast`}>
             <Button
               type="text"
@@ -615,7 +623,6 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
         </Space>
       }
       key={broadcast.id}
-      className="!mb-6"
     >
       <div className="p-6">
         {/* Show progress bar when sending */}
@@ -1108,6 +1115,7 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
         />
       )}
     </Card>
+    </div>
   )
 }
 
@@ -1279,13 +1287,29 @@ export function BroadcastsPage() {
 
   const hasBroadcasts = !isLoading && data?.broadcasts && data.broadcasts.length > 0
   const hasMarketingEmailProvider = currentWorkspace?.settings?.marketing_email_provider_id
+  const broadcastCount = data?.total_count ?? data?.broadcasts?.length ?? 0
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-2xl font-medium">{t`Broadcasts`}</div>
-        {currentWorkspace && hasBroadcasts && (
-          <Space>
+    <div className="p-6 space-y-4">
+      {/* Campaigns header strip */}
+      <div className="mailstudio-card px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+                {t`Campaigns`}
+              </h1>
+              {!isLoading && (
+                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                  {broadcastCount}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 mb-0 text-sm text-slate-400">
+              {t`Schedule and send bulk email to your audiences`}
+            </p>
+          </div>
+          {currentWorkspace && (
             <Tooltip
               title={
                 !permissions?.broadcasts?.write
@@ -1298,24 +1322,25 @@ export function BroadcastsPage() {
                   workspace={currentWorkspace}
                   lists={lists}
                   segments={segments}
-                  buttonContent={<>{t`Create Broadcast`}</>}
+                  buttonContent={<>{t`Create campaign`}</>}
                   buttonProps={{
+                    type: 'primary',
                     disabled: !permissions?.broadcasts?.write
                   }}
                 />
               </div>
             </Tooltip>
-          </Space>
-        )}
+          )}
+        </div>
       </div>
 
       {!hasMarketingEmailProvider && (
         <Alert
           message={t`Email Provider Required`}
-          description={t`You don't have a marketing email provider configured. Please set up an email provider in your workspace settings to send broadcasts.`}
+          description={t`You don't have a marketing email provider configured. Please set up an email provider in your workspace settings to send campaigns.`}
           type="warning"
           showIcon
-          className="!mb-6"
+          className="!mb-0"
           action={
             <Button
               type="primary"
@@ -1331,8 +1356,10 @@ export function BroadcastsPage() {
       {isLoading ? (
         <Row gutter={[16, 16]}>
           {[1, 2, 3].map((key) => (
-            <Col xs={24} sm={12} lg={8} key={key}>
-              <Card loading variant="outlined" />
+            <Col xs={24} key={key}>
+              <div className="mailstudio-card overflow-hidden">
+                <Card loading variant="borderless" styles={{ body: { background: 'transparent' } }} />
+              </div>
             </Col>
           ))}
         </Row>
@@ -1361,7 +1388,7 @@ export function BroadcastsPage() {
 
           {/* Pagination */}
           {data && data.total_count > pageSize && (
-            <div className="flex justify-center mt-8">
+            <div className="flex justify-center mt-4">
               <Pagination
                 current={currentPage}
                 pageSize={pageSize}
@@ -1369,40 +1396,40 @@ export function BroadcastsPage() {
                 onChange={handlePageChange}
                 showSizeChanger={false}
                 showQuickJumper={false}
-                showTotal={(total, range) => t`${range[0]}-${range[1]} of ${total} broadcasts`}
+                showTotal={(total, range) => t`${range[0]}-${range[1]} of ${total} campaigns`}
               />
             </div>
           )}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <Title level={4} type="secondary">
-            {t`No broadcasts found`}
-          </Title>
-          <Paragraph type="secondary">{t`Create your first broadcast to get started`}</Paragraph>
-          <div className="mt-4">
-            {currentWorkspace && (
-              <Tooltip
-                title={
-                  !permissions?.broadcasts?.write
-                    ? t`You don't have write permission for broadcasts`
-                    : undefined
-                }
-              >
-                <div>
-                  <UpsertBroadcastDrawer
-                    workspace={currentWorkspace}
-                    lists={lists}
-                    segments={segments}
-                    buttonContent={t`Create Broadcast`}
-                    buttonProps={{
-                      disabled: !permissions?.broadcasts?.write
-                    }}
-                  />
-                </div>
-              </Tooltip>
-            )}
-          </div>
+        <div className="mailstudio-card px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No campaigns yet`}</h2>
+          <p className="mt-2 mb-6 text-sm text-slate-400">
+            {t`Create your first campaign to schedule or send bulk email.`}
+          </p>
+          {currentWorkspace && (
+            <Tooltip
+              title={
+                !permissions?.broadcasts?.write
+                  ? t`You don't have write permission for broadcasts`
+                  : undefined
+              }
+            >
+              <div>
+                <UpsertBroadcastDrawer
+                  workspace={currentWorkspace}
+                  lists={lists}
+                  segments={segments}
+                  buttonContent={t`Create campaign`}
+                  buttonProps={{
+                    type: 'primary',
+                    size: 'large',
+                    disabled: !permissions?.broadcasts?.write
+                  }}
+                />
+              </div>
+            </Tooltip>
+          )}
         </div>
       )}
 

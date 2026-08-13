@@ -119,7 +119,7 @@ export function FileManagerPage() {
         <div className="text-2xl font-medium">{t`File Manager`}</div>
       </div>
 
-      <div className="border border-gray-200 rounded-md p-4">
+      <div className="border border-slate-800 rounded-md p-4">
         <FileManager {...fileManagerProps} />
       </div>
     </div>

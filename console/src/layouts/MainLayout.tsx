@@ -9,28 +9,19 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { t } = useLingui()
-
   return (
     <Layout
       style={{
         minHeight: '100vh',
         backgroundImage: 'url(/console/splash.jpg)',
         backgroundSize: 'cover',
-        backgroundPosition: 'center'
+        backgroundPosition: 'center',
+        backgroundColor: '#0b0f19'
       }}
+      className="relative overflow-hidden"
     >
-      <Content style={{ padding: '24px' }}>{children}</Content>
-      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded-sm text-[9px]">
-        <a
-          href="https://unsplash.com/fr/@zetong"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="!text-gray-400 no-underline"
-        >
-          {t`Photo by Zetong Li`}
-        </a>
-      </div>
+      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" />
+      <Content className="relative z-10 p-6">{children}</Content>
     </Layout>
   )
 }
@@ -43,16 +34,16 @@ interface MainLayoutSidebarProps {
 
 export function MainLayoutSidebar({ children, title, extra }: MainLayoutSidebarProps) {
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-[400px] p-6 backdrop-blur-lg bg-white/90 border-l border-black/[0.06] overflow-y-auto">
+    <div className="fixed right-0 top-0 bottom-0 w-[420px] max-w-full p-6 backdrop-blur-2xl bg-slate-900/90 border-l border-slate-800/80 text-slate-100 overflow-y-auto shadow-2xl z-20">
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '20px'
+          marginBottom: '24px'
         }}
       >
-        <h3 style={{ margin: 0 }}>{title}</h3>
+        <h3 className="text-xl font-bold text-white tracking-tight m-0">{title}</h3>
         {extra}
       </div>
       {children}

@@ -119,78 +119,136 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Statistics Row - 4 columns */}
-      <Row gutter={[16, 16]} className="mb-8">
+      <Row gutter={[16, 16]}>
         {/* Total Contacts */}
-        <Col xs={24} sm={12} md={6}>
-          <div className="p-4 rounded-lg bg-gray-100" style={{ height: '110px' }}>
-            <Statistic
-              title={t`Total Contacts`}
-              value={totalContacts as number}
-              valueStyle={{ fontSize: '24px', fontWeight: 'bold' }}
-              formatter={(value) => formatStat(value as number, totalContactsLoading)}
-            />
+        <Col xs={24} sm={12} lg={6}>
+          <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`Total Contacts`}</span>
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-bold text-white tracking-tight">
+                {formatStat(totalContacts as number, totalContactsLoading)}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
+                <span className="text-emerald-300 font-semibold bg-emerald-950/80 px-1.5 py-0.5 rounded text-[11px] border border-emerald-800/80">+100%</span>
+                <span>audience database</span>
+              </div>
+            </div>
           </div>
         </Col>
 
         {/* New Contacts */}
-        <Col xs={24} sm={12} md={6}>
-          <div className="bg-gray-100 p-4 rounded-lg" style={{ height: '110px' }}>
-            <Statistic
-              title={t`New Contacts`}
-              value={newContactsCount as number}
-              valueStyle={{ fontSize: '24px', fontWeight: 'bold' }}
-              formatter={(value) => formatStat(value as number, newContactsLoading)}
-            />
+        <Col xs={24} sm={12} lg={6}>
+          <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`New Contacts`}</span>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <line x1="19" x2="19" y1="8" y2="14"/>
+                  <line x1="16" x2="22" y1="11" y2="11"/>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-bold text-white tracking-tight">
+                {formatStat(newContactsCount as number, newContactsLoading)}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
+                <span className="text-indigo-300 font-semibold bg-indigo-950/80 px-1.5 py-0.5 rounded text-[11px] border border-indigo-800/80">Range</span>
+                <span>in selected period</span>
+              </div>
+            </div>
           </div>
         </Col>
 
         {/* Transactional Email Provider */}
-        <Col xs={24} sm={12} md={6}>
-          <div className="bg-gray-100 p-4 rounded-lg" style={{ height: '110px' }}>
-            <div className="text-gray-500 text-sm mb-2">{t`Transactional Provider`}</div>
-            {transactionalProvider ? (
-              <div>
-                <div className="mb-1">
-                  <span className="font-medium">{transactionalProviderInfo?.name}</span>
+        <Col xs={24} sm={12} lg={6}>
+          <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`Transactional Provider`}</span>
+              <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center border border-violet-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m22 2-7 20-4-9-9-4Z"/>
+                  <path d="M22 2 11 13"/>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3">
+              {transactionalProvider ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm">{transactionalProviderInfo?.name}</span>
+                    <span className="bg-emerald-950/80 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-semibold border border-emerald-800/80">
+                      Active
+                    </span>
+                  </div>
+                  {transactionalSender && (
+                    <div className="text-xs text-slate-400 mt-1 truncate max-w-[200px]" title={transactionalSender.email}>
+                      {transactionalSender.email}
+                    </div>
+                  )}
                 </div>
-                {transactionalSender && (
-                  <div className="text-sm text-gray-600">{transactionalSender.email}</div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div className="text-gray-400 mb-2">{t`Not configured`}</div>
-                <Button size="small" type="primary" onClick={handleNavigateToSettings}>
-                  {t`Configure`}
-                </Button>
-              </div>
-            )}
+              ) : (
+                <div>
+                  <div className="text-xs text-slate-500 mb-2">{t`Not configured`}</div>
+                  <Button size="small" type="primary" onClick={handleNavigateToSettings} className="text-xs">
+                    {t`Configure`}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </Col>
 
         {/* Marketing Email Provider */}
-        <Col xs={24} sm={12} md={6}>
-          <div className="bg-gray-100 p-4 rounded-lg" style={{ height: '110px' }}>
-            <div className="text-gray-500 text-sm mb-2">{t`Marketing Provider`}</div>
-            {marketingProvider ? (
-              <div>
-                <div className="mb-1">
-                  <span className="font-medium">{marketingProviderInfo?.name}</span>
+        <Col xs={24} sm={12} lg={6}>
+          <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`Marketing Provider`}</span>
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3 11 18-5v12L3 14v-3z"/>
+                  <path d="M11.6 16.8 a3 3 0 1 1-5.8-1.6"/>
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3">
+              {marketingProvider ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm">{marketingProviderInfo?.name}</span>
+                    <span className="bg-emerald-950/80 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-semibold border border-emerald-800/80">
+                      Active
+                    </span>
+                  </div>
+                  {marketingSender && (
+                    <div className="text-xs text-slate-400 mt-1 truncate max-w-[200px]" title={marketingSender.email}>
+                      {marketingSender.email}
+                    </div>
+                  )}
                 </div>
-                {marketingSender && (
-                  <div className="text-sm text-gray-600">{marketingSender.email}</div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div className="text-gray-400 mb-2">{t`Not configured`}</div>
-                <Button size="small" type="primary" onClick={handleNavigateToSettings}>
-                  {t`Configure`}
-                </Button>
-              </div>
-            )}
+              ) : (
+                <div>
+                  <div className="text-xs text-slate-500 mb-2">{t`Not configured`}</div>
+                  <Button size="small" type="primary" onClick={handleNavigateToSettings} className="text-xs">
+                    {t`Configure`}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </Col>
       </Row>

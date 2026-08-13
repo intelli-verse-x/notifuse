@@ -62,9 +62,22 @@ export const FailedMessagesTable: React.FC<FailedMessagesTableProps> = ({ worksp
   )
 
   return (
-    <Card title={t`Recent Failed Messages`} extra={cardExtra}>
+    <div className="mailstudio-card p-4 sm:p-6 overflow-x-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+        <div>
+          <h2 className="text-sm sm:text-base font-bold text-white tracking-tight m-0">{t`Recent Failed Messages`}</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-0">{t`Messages requiring deliverability diagnosis`}</p>
+        </div>
+        <button
+          onClick={handleViewMore}
+          className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
+        >
+          {t`View failed logs →`}
+        </button>
+      </div>
+
       {error ? (
-        <div className="text-red-500 p-4">
+        <div className="text-red-500 p-4 text-xs">
           <p>{t`Error`}: {error}</p>
         </div>
       ) : (
@@ -80,6 +93,6 @@ export const FailedMessagesTable: React.FC<FailedMessagesTableProps> = ({ worksp
           workspace={workspace}
         />
       )}
-    </Card>
+    </div>
   )
 }

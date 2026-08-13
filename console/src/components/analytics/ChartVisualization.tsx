@@ -101,38 +101,57 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
         type: 'line',
         data: chartData.map((item) => item[measure] || 0),
         smooth: true,
-        symbol: 'none', // Hide dots by default
-        symbolSize: 6,
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: false,
+        lineStyle: {
+          width: 2.5
+        },
         emphasis: {
           focus: 'series',
-          symbol: 'circle', // Show dots on hover
-          symbolSize: 8
+          scale: true,
+          lineStyle: {
+            width: 3.5
+          }
         },
         ...(colors[measure] && { itemStyle: { color: colors[measure] } })
       }))
 
       return {
-        animation: false, // Remove animations
+        animation: true,
+        animationDuration: 400,
         tooltip: {
           trigger: 'axis',
+          backgroundColor: '#1E293B',
+          borderColor: 'rgba(255, 255, 255, 0.12)',
+          borderWidth: 1,
+          padding: [10, 14],
+          extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border-radius: 12px;',
           axisPointer: {
-            type: 'cross'
+            type: 'line',
+            lineStyle: {
+              color: 'rgba(99, 102, 241, 0.5)',
+              width: 1.5,
+              type: 'dashed'
+            }
           },
           formatter: (params: unknown) => {
             if (!Array.isArray(params)) return ''
 
-            let result = `<div style="margin-bottom: 4px; font-weight: 600;">${(params[0] as { axisValue?: string })?.axisValue || ''}</div>`
+            let result = `<div style="margin-bottom: 6px; font-weight: 700; color: #F8FAFC; font-size: 12px; border-bottom: 1px solid #334155; padding-bottom: 4px;">${(params[0] as { axisValue?: string })?.axisValue || ''}</div>`
 
             params.forEach((param: { seriesName?: string; value?: number; color?: string }) => {
               const measureName = param.seriesName || ''
               const title = measureTitles[measureName] || measureName
               const value = param.value || 0
-              const color = param.color || '#000'
+              const color = param.color || '#6366F1'
 
-              result += `<div style="display: flex; align-items: center; margin: 2px 0;">
-                <span style="display: inline-block; width: 10px; height: 10px; background-color: ${color}; border-radius: 50%; margin-right: 8px;"></span>
-                <span style="font-weight: 500;">${title}:</span>
-                <span style="margin-left: 8px; font-weight: 600;">${value.toLocaleString()}</span>
+              result += `<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 4px 0; font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 8px; height: 8px; background-color: ${color}; border-radius: 50%;"></span>
+                  <span style="color: #94A3B8; font-weight: 500;">${title}</span>
+                </div>
+                <span style="font-weight: 700; color: #FFFFFF;">${value.toLocaleString()}</span>
               </div>`
             })
 
@@ -141,22 +160,42 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
         },
         ...(showLegend ? {
           legend: {
-            data: measures
+            data: measures,
+            textStyle: { color: '#94A3B8' }
           }
         } : {}),
         grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '3%',
+          left: '2%',
+          right: '2%',
+          top: '8%',
+          bottom: '2%',
           containLabel: true
         },
         xAxis: {
           type: 'category',
           boundaryGap: false,
-          data: xAxisData
+          data: xAxisData,
+          axisLine: {
+            lineStyle: { color: '#334155' }
+          },
+          axisLabel: {
+            color: '#94A3B8',
+            fontSize: 11,
+            margin: 12
+          }
         },
         yAxis: {
-          type: 'value'
+          type: 'value',
+          splitLine: {
+            lineStyle: {
+              color: '#1E293B',
+              type: 'dashed'
+            }
+          },
+          axisLabel: {
+            color: '#94A3B8',
+            fontSize: 11
+          }
         },
         series
       }

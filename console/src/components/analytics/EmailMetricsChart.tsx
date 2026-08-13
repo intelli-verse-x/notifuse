@@ -274,20 +274,25 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
   }
 
   return (
-    <Card
-      title={t`Email Metrics`}
-      extra={
-        <Segmented
-          value={messageTypeFilter}
-          onChange={handleFilterChange}
-          options={[
-            { label: t`All`, value: 'all' },
-            { label: t`Broadcasts`, value: 'broadcasts' },
-            { label: t`Transactional`, value: 'transactional' }
-          ]}
-        />
-      }
-    >
+    <div className="mailstudio-card p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-800">
+        <div>
+          <h2 className="text-sm sm:text-base font-bold text-white tracking-tight m-0">{t`Email Metrics`}</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-0">{t`Click metrics below to toggle chart lines`}</p>
+        </div>
+        <div className="w-full sm:w-auto overflow-x-auto">
+          <Segmented
+            value={messageTypeFilter}
+            onChange={handleFilterChange}
+            options={[
+              { label: t`All Messages`, value: 'all' },
+              { label: t`Broadcasts`, value: 'broadcasts' },
+              { label: t`Transactional`, value: 'transactional' }
+            ]}
+          />
+        </div>
+      </div>
+
       {/* Error Alert */}
       {error && (
         <Alert
@@ -299,238 +304,183 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
         />
       )}
 
-      {/* Stats Row */}
-      <Row gutter={[16, 16]} wrap className="flex-nowrap overflow-x-auto">
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_sent ? t`${stats.count_sent} total emails sent (hidden from chart)` : t`${stats.count_sent} total emails sent`}
+      {/* Stats Row - 8 metric pills */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        {/* Sent */}
+        <Tooltip title={!visibleLines.count_sent ? t`${stats.count_sent} total sent (hidden)` : t`${stats.count_sent} total sent`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_sent
+                ? 'bg-blue-950/40 border-blue-500/50 shadow-md shadow-blue-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_sent')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_sent ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_sent')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faPaperPlane}
-                      style={{ opacity: 0.7 }}
-                      className="text-blue-500"
-                    />{' '}
-                    {t`Sent`}
-                  </Space>
-                }
-                value={stats.count_sent}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              {t`Sent`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_delivered ? t`${stats.count_delivered} emails successfully delivered (hidden from chart)` : t`${stats.count_delivered} emails successfully delivered`}
+            <div className="text-base font-bold text-white">
+              {formatStat(stats.count_sent)}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Delivered */}
+        <Tooltip title={!visibleLines.count_delivered ? t`${stats.count_delivered} delivered (hidden)` : t`${stats.count_delivered} delivered`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_delivered
+                ? 'bg-emerald-950/40 border-emerald-500/50 shadow-md shadow-emerald-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_delivered')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_delivered ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_delivered')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faCircleCheck}
-                      style={{ opacity: 0.7 }}
-                      className="text-green-500"
-                    />{' '}
-                    {t`Delivered`}
-                  </Space>
-                }
-                value={getRate(stats.count_delivered, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              {t`Delivered`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_opened ? t`${stats.count_opened} total opens (hidden from chart)` : t`${stats.count_opened} total opens`}
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_delivered, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Opens */}
+        <Tooltip title={!visibleLines.count_opened ? t`${stats.count_opened} opens (hidden)` : t`${stats.count_opened} opens`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_opened
+                ? 'bg-purple-950/40 border-purple-500/50 shadow-md shadow-purple-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_opened')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_opened ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_opened')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faEye}
-                      style={{ opacity: 0.7 }}
-                      className="text-purple-500"
-                    />{' '}
-                    {t`Opens`}
-                  </Space>
-                }
-                value={getRate(stats.count_opened, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+              {t`Opens`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_clicked ? t`${stats.count_clicked} total clicks (hidden from chart)` : t`${stats.count_clicked} total clicks`}
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_opened, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Clicks */}
+        <Tooltip title={!visibleLines.count_clicked ? t`${stats.count_clicked} clicks (hidden)` : t`${stats.count_clicked} clicks`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_clicked
+                ? 'bg-cyan-950/40 border-cyan-500/50 shadow-md shadow-cyan-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_clicked')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_clicked ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_clicked')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faArrowPointer}
-                      style={{ opacity: 0.7 }}
-                      className="text-cyan-500 mr-1"
-                    />{' '}
-                    {t`Clicks`}
-                  </Space>
-                }
-                value={getRate(stats.count_clicked, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+              {t`Clicks`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_bounced ? t`${stats.count_bounced} emails bounced back (hidden from chart)` : t`${stats.count_bounced} emails bounced back`}
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_clicked, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Bounced */}
+        <Tooltip title={!visibleLines.count_bounced ? t`${stats.count_bounced} bounced (hidden)` : t`${stats.count_bounced} bounced`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_bounced
+                ? 'bg-orange-950/40 border-orange-500/50 shadow-md shadow-orange-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_bounced')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_bounced ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_bounced')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faTriangleExclamation}
-                      style={{ opacity: 0.7 }}
-                      className="text-orange-500"
-                    />{' '}
-                    {t`Bounced`}
-                  </Space>
-                }
-                value={getRate(stats.count_bounced, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+              {t`Bounced`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_complained ? t`${stats.count_complained} total complaints (hidden from chart)` : t`${stats.count_complained} total complaints`}
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_bounced, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Complaints */}
+        <Tooltip title={!visibleLines.count_complained ? t`${stats.count_complained} complaints (hidden)` : t`${stats.count_complained} complaints`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_complained
+                ? 'bg-amber-950/40 border-amber-500/50 shadow-md shadow-amber-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_complained')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_complained ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_complained')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faFaceFrown}
-                      style={{ opacity: 0.7 }}
-                      className="text-orange-500"
-                    />{' '}
-                    {t`Complaints`}
-                  </Space>
-                }
-                value={getRate(stats.count_complained, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              {t`Complaints`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_unsubscribed ? t`${stats.count_unsubscribed} total unsubscribes (hidden from chart)` : t`${stats.count_unsubscribed} total unsubscribes`}
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_complained, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Unsubscribed */}
+        <Tooltip title={!visibleLines.count_unsubscribed ? t`${stats.count_unsubscribed} unsubscribes (hidden)` : t`${stats.count_unsubscribed} unsubscribes`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_unsubscribed
+                ? 'bg-rose-950/40 border-rose-500/50 shadow-md shadow-rose-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_unsubscribed')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_unsubscribed ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_unsubscribed')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faBan}
-                      style={{ opacity: 0.7 }}
-                      className="text-orange-500"
-                    />{' '}
-                    {t`Unsub.`}
-                  </Space>
-                }
-                value={getRate(stats.count_unsubscribed, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+              {t`Unsub.`}
             </div>
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <Tooltip
-            title={!visibleLines.count_failed ? t`${stats.count_failed} emails failed to send (hidden from chart)` : t`${stats.count_failed} emails failed to send`}
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_unsubscribed, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Failed */}
+        <Tooltip title={!visibleLines.count_failed ? t`${stats.count_failed} failed (hidden)` : t`${stats.count_failed} failed`}>
+          <div
+            className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
+              visibleLines.count_failed
+                ? 'bg-red-950/40 border-red-500/50 shadow-md shadow-red-500/10'
+                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+            }`}
+            onClick={() => toggleLineVisibility('count_failed')}
           >
-            <div
-              className="p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors"
-              style={{ opacity: visibleLines.count_failed ? 1 : 0.5 }}
-              onClick={() => toggleLineVisibility('count_failed')}
-            >
-              <Statistic
-                title={
-                  <Space className="font-medium">
-                    <FontAwesomeIcon
-                      icon={faCircleXmark}
-                      style={{ opacity: 0.7 }}
-                      className="text-red-500"
-                    />{' '}
-                    {t`Failed`}
-                  </Space>
-                }
-                value={getRate(stats.count_failed, stats.count_sent)}
-                valueStyle={{ fontSize: '16px' }}
-                formatter={formatStat}
-              />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-red-400 mb-1">
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+              {t`Failed`}
             </div>
-          </Tooltip>
-        </Col>
-      </Row>
+            <div className="text-base font-bold text-white">
+              {formatStat(getRate(stats.count_failed, stats.count_sent))}
+            </div>
+          </div>
+        </Tooltip>
+      </div>
 
       {/* Chart */}
-      <ChartVisualization
-        data={data}
-        chartType="line"
-        query={buildQuery(messageTypeFilter)}
-        loading={loading}
-        error={error}
-        height={220}
-        showLegend={false}
-        colors={chartColors}
-        measureTitles={measureTitles}
-      />
-    </Card>
+      <div className="pt-2">
+        <ChartVisualization
+          data={data}
+          chartType="line"
+          query={buildQuery(messageTypeFilter)}
+          loading={loading}
+          error={error}
+          height={240}
+          showLegend={false}
+          colors={chartColors}
+          measureTitles={measureTitles}
+        />
+      </div>
+    </div>
   )
 }

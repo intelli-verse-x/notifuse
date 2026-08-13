@@ -1016,7 +1016,7 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
           <div
             key={`${provider.type}-${provider.kind}`}
             onClick={() => handleSelectProviderType(provider.kind)}
-            className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-all cursor-pointer mb-4 relative"
+            className="flex justify-between items-center p-4 border border-slate-800 rounded-lg hover:border-slate-700 transition-all cursor-pointer mb-4 relative"
           >
             <div className="flex items-center">
               {provider.getIcon('', 'large')}
@@ -1040,7 +1040,7 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
         <div
           key="supabase"
           onClick={() => handleSelectSupabase()}
-          className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-all cursor-pointer mb-4 relative"
+          className="flex justify-between items-center p-4 border border-slate-800 rounded-lg hover:border-slate-700 transition-all cursor-pointer mb-4 relative"
         >
           <div className="flex items-center">
             <img src="/console/supabase.png" alt="Supabase" style={{ height: 13 }} />
@@ -1064,7 +1064,7 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
           <div
             key={`${provider.type}-${provider.kind}`}
             onClick={() => handleSelectLLMProvider(provider.kind)}
-            className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-all cursor-pointer mb-4 relative"
+            className="flex justify-between items-center p-4 border border-slate-800 rounded-lg hover:border-slate-700 transition-all cursor-pointer mb-4 relative"
           >
             <div className="flex items-center">
               {provider.getIcon('', 'large')}
@@ -1087,7 +1087,7 @@ export function Integrations({ workspace, onSave, loading, isOwner }: Integratio
         {/* Firecrawl */}
         <div
           onClick={() => handleSelectFirecrawl()}
-          className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-all cursor-pointer mb-4 relative"
+          className="flex justify-between items-center p-4 border border-slate-800 rounded-lg hover:border-slate-700 transition-all cursor-pointer mb-4 relative"
         >
           <div className="flex items-center">
             {firecrawlProvider.getIcon('', 'large')}

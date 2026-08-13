@@ -100,92 +100,102 @@ export function CreateWorkspacePage() {
 
   return (
     <MainLayout>
-      <MainLayoutSidebar
-        title={t`New workspace`}
-        extra={
-          <Button
-            type="primary"
-            ghost
-            icon={<ArrowLeftOutlined />}
-            onClick={handleBackToDashboard}
-            style={{ padding: '4px', lineHeight: 1 }}
-          />
-        }
-      >
-        <Form
-          name="create-workspace"
-          layout="vertical"
-          onFinish={onFinish}
-          autoComplete="off"
-          form={form}
-          initialValues={{ id: '' }}
-        >
-          <Form.Item
-            label={t`Workspace Name`}
-            name="name"
-            rules={[
-              { required: true, message: t`Please enter a workspace name` },
-              { min: 3, message: t`Workspace name must be at least 3 characters long` }
-            ]}
-          >
-            <Input placeholder={t`Enter a name for your workspace`} onChange={handleNameChange} />
-          </Form.Item>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4 sm:p-6">
+        <div className="w-full max-w-lg p-6 sm:p-8 rounded-2xl bg-slate-900/85 backdrop-blur-2xl border border-slate-800/90 shadow-2xl shadow-indigo-950/40">
+          <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-800/80">
+            <div className="flex items-center gap-3">
+              <Button
+                type="text"
+                icon={<ArrowLeftOutlined className="text-slate-400" />}
+                onClick={handleBackToDashboard}
+                className="hover:bg-slate-800 text-slate-300"
+              />
+              <div>
+                <h2 className="text-lg font-bold text-white tracking-tight leading-tight m-0">{t`New Workspace`}</h2>
+                <p className="text-xs text-slate-400 m-0">{t`Set up a new workspace for your team`}</p>
+              </div>
+            </div>
+          </div>
 
-          <Form.Item
-            label={
-              <span>
-                {t`Workspace ID`} &nbsp;
-                <Tooltip title={t`This ID will be used in URLs and API requests. It can only contain lowercase letters and numbers.`}>
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </span>
-            }
-            name="id"
-            rules={[
-              { required: true, message: t`Workspace ID is required` },
-              {
-                pattern: /^[a-z0-9]+$/,
-                message: t`ID can only contain lowercase letters and numbers`
-              }
-            ]}
+          <Form
+            name="create-workspace"
+            layout="vertical"
+            onFinish={onFinish}
+            autoComplete="off"
+            form={form}
+            initialValues={{ id: '' }}
+            size="large"
           >
-            <Input
-              placeholder="workspaceid"
-              suffix={
-                <Tooltip title={t`ID is automatically generated but can be modified if needed`}>
-                  <InfoCircleOutlined style={{ color: 'rgba(0,0,0,.45)' }} />
-                </Tooltip>
-              }
-            />
-          </Form.Item>
-
-          <Form.Item
-            label={t`Website URL`}
-            name="website_url"
-            rules={[
-              {
-                pattern: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
-                message: t`Please enter a valid URL`,
-                validateTrigger: 'onBlur'
-              }
-            ]}
-            extra={t`We'll automatically detect and use your website's favicon`}
-          >
-            <Input placeholder="https://example.com" />
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              style={{ width: '100%', marginTop: 20 }}
+            <Form.Item
+              label={<span className="text-slate-300 font-medium text-xs">{t`Workspace Name`}</span>}
+              name="name"
+              rules={[
+                { required: true, message: t`Please enter a workspace name` },
+                { min: 3, message: t`Workspace name must be at least 3 characters long` }
+              ]}
             >
-              {t`Create Workspace`}
-            </Button>
-          </Form.Item>
-        </Form>
-      </MainLayoutSidebar>
+              <Input placeholder={t`Enter a name for your workspace`} onChange={handleNameChange} className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-slate-300 font-medium text-xs">
+                  {t`Workspace ID`}&nbsp;
+                  <Tooltip title={t`This ID will be used in URLs and API requests. It can only contain lowercase letters and numbers.`}>
+                    <InfoCircleOutlined className="text-slate-400" />
+                  </Tooltip>
+                </span>
+              }
+              name="id"
+              rules={[
+                { required: true, message: t`Workspace ID is required` },
+                {
+                  pattern: /^[a-z0-9]+$/,
+                  message: t`ID can only contain lowercase letters and numbers`
+                }
+              ]}
+            >
+              <Input
+                placeholder="workspaceid"
+                className="rounded-lg"
+                suffix={
+                  <Tooltip title={t`ID is automatically generated but can be modified if needed`}>
+                    <InfoCircleOutlined style={{ color: 'rgba(255,255,255,.45)' }} />
+                  </Tooltip>
+                }
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span className="text-slate-300 font-medium text-xs">{t`Website URL`}</span>}
+              name="website_url"
+              rules={[
+                {
+                  pattern: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+                  message: t`Please enter a valid URL`,
+                  validateTrigger: 'onBlur'
+                }
+              ]}
+              extra={<span className="text-xs text-slate-400">{t`We'll automatically detect and use your website's favicon`}</span>}
+            >
+              <Input placeholder="https://example.com" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item className="mb-0 mt-6">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                size="large"
+                className="font-semibold shadow-lg shadow-indigo-500/20"
+              >
+                {t`Create Workspace`}
+              </Button>
+            </Form.Item>
+          </Form>
+        </div>
+      </div>
     </MainLayout>
   )
 }

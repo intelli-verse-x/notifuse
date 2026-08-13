@@ -2,26 +2,72 @@
 @import "./components/email_builder/editor.css";
 @import "./styles/reactflow.css";
 @theme {
-  --color-primary: #7763f1;
+  --color-primary: #6366f1;
 }
 
 :root {
-  --background: rgb(243, 246, 252);
-  --foreground: #171717;
-  --primary: #7763f1;
+  --background: #0b0f19;
+  --foreground: #f8fafc;
+  --primary: #6366f1;
 
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
+  color-scheme: dark;
+  color: #f8fafc;
   background-color: var(--background);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mail Studio Theme Utilities (Dark Mode) */
+.mailstudio-card {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.mailstudio-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.4), 0 0 15px 0 rgba(99, 102, 241, 0.08);
+}
+
+.mailstudio-glass-hero {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(17, 24, 39, 0.9) 100%);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.pulse-dot-green {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 a {
@@ -46,24 +92,32 @@ h1 {
   border-bottom: 1px solid rgba(78, 108, 255, 0.4) !important;
 }
 
-/* Contacts table: fixed left (email) and right (actions) columns need an
- * opaque background so scrolling content doesn't bleed through. Use enough
- * selector specificity to beat antd's own `.ant-table-cell.ant-table-cell-fix-*`
- * rules (0,2,0), otherwise the cells render transparent and horizontal scroll
- * content shows through underneath. */
-td.ant-table-cell.contacts-fixed-col,
-th.ant-table-cell.contacts-fixed-col {
-  background-color: #F9F9F9;
+/* Antd Fixed Table Columns Dark Mode Overrides */
+.ant-table-cell-fix-left,
+.ant-table-cell-fix-right,
+td.ant-table-cell.contacts-fixed-col {
+  background-color: #111827 !important;
+  color: #f8fafc !important;
 }
-.ant-table-tbody > tr:hover > td.ant-table-cell.contacts-fixed-col {
-  background-color: #F9F9F9;
+
+th.ant-table-cell.contacts-fixed-col,
+.ant-table-thead > tr > th.ant-table-cell-fix-left,
+.ant-table-thead > tr > th.ant-table-cell-fix-right {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
 }
-/* antd v5 doesn't expose --ant-control-item-bg-active as a CSS variable on
- * :root — it generates selected-row styles at runtime with the literal color.
- * Use the same literal value so our higher-specificity selector matches. */
+
+.ant-table-tbody > tr:hover > td.ant-table-cell.contacts-fixed-col,
+.ant-table-tbody > tr:hover > td.ant-table-cell-fix-left,
+.ant-table-tbody > tr:hover > td.ant-table-cell-fix-right {
+  background-color: #1e293b !important;
+}
+
 .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell.contacts-fixed-col,
-.ant-table-tbody > tr.ant-table-row-selected:hover > td.ant-table-cell.contacts-fixed-col {
-  background-color: rgb(244, 240, 255);
+.ant-table-tbody > tr.ant-table-row-selected:hover > td.ant-table-cell.contacts-fixed-col,
+.ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-fix-left,
+.ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-fix-right {
+  background-color: rgba(99, 102, 241, 0.25) !important;
 }
 
 .drawer-body-no-padding .ant-drawer-body {
@@ -108,6 +162,30 @@ th.ant-table-cell.contacts-fixed-col {
 
 .ant-alert.ant-alert-error {
   border-left-color: #ff4d4f !important;
+}
+
+/* Thin dark scrollbars (Firefox + Chromium) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.55);
 }
 
 /* Required mark inscreses the line height of the form item creating discrepancy when using 2 columns */

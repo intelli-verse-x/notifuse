@@ -72,35 +72,55 @@ export function AnalyticsPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-2xl font-medium">{t`Dashboard`}</div>
-        <Space>
-          <Select
-            value={selectedTimezone}
-            onChange={handleTimezoneChange}
-            options={TIMEZONE_OPTIONS}
-            optionFilterProp="label"
-            variant="filled"
-            style={{ width: 170 }}
-            placeholder={t`Select timezone`}
-            showSearch
-            filterOption={(input, option) =>
-              (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
-            }
-          />
-          <Segmented
-            value={selectedPeriod}
-            onChange={handlePeriodChange}
-            options={[
-              { label: '7D', value: '7D' },
-              { label: '14D', value: '14D' },
-              { label: '30D', value: '30D' },
-              { label: '90D', value: '90D' }
-            ]}
-          />
-        </Space>
+    <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      {/* Mail Studio Dark Dashboard Hero Banner */}
+      <div className="mailstudio-glass-hero p-4 sm:p-6 rounded-2xl border border-indigo-500/20 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight m-0">{t`Dashboard`}</h1>
+            <span className="bg-indigo-500/20 text-indigo-300 text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full font-semibold border border-indigo-500/30">
+              Live Monitor
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 mb-0">
+            {t`Real-time dispatch performance, audience metrics, and email provider health.`}
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-2 bg-slate-800/80 backdrop-blur-sm p-1 rounded-xl border border-slate-700/80 shadow-inner">
+            <span className="text-xs text-slate-400 font-medium pl-2.5">{t`TZ:`}</span>
+            <Select
+              value={selectedTimezone}
+              onChange={handleTimezoneChange}
+              options={TIMEZONE_OPTIONS}
+              optionFilterProp="label"
+              variant="borderless"
+              style={{ width: 145 }}
+              placeholder={t`Select timezone`}
+              className="text-xs font-medium text-slate-200"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </div>
+
+          <div className="bg-slate-800/80 backdrop-blur-sm p-1 rounded-xl border border-slate-700/80 shadow-inner flex justify-center">
+            <Segmented
+              value={selectedPeriod}
+              onChange={handlePeriodChange}
+              options={[
+                { label: '7D', value: '7D' },
+                { label: '14D', value: '14D' },
+                { label: '30D', value: '30D' },
+                { label: '90D', value: '90D' }
+              ]}
+            />
+          </div>
+        </div>
       </div>
+
       <AnalyticsDashboard workspace={workspace} timeRange={timeRange} timezone={selectedTimezone} />
     </div>
   )

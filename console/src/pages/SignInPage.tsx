@@ -128,8 +128,16 @@ export function SignInPage() {
 
   return (
     <MainLayout>
-      <div className="flex items-center justify-center h-[calc(100vh-48px)]">
-        <Card title={t`Sign In`} style={{ width: 400 }}>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-md p-8 rounded-2xl bg-slate-900/80 backdrop-blur-2xl border border-slate-800/90 shadow-2xl shadow-indigo-950/40">
+          <div className="flex flex-col items-center mb-6 text-center">
+            <div className="text-2xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] mb-2">
+              Mail Studio<span className="text-indigo-500">.</span>
+            </div>
+            <h2 className="text-sm font-semibold text-slate-200 tracking-tight">{t`Sign In`}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{t`Welcome back to Mail Studio`}</p>
+          </div>
+
           {!showCodeInput ? (
             <Form
               form={form}
@@ -137,28 +145,39 @@ export function SignInPage() {
               onFinish={handleEmailSubmit}
               layout="vertical"
               initialValues={{ email }}
+              size="large"
             >
               <Form.Item
-                label={t`Email`}
+                label={<span className="text-slate-300 font-medium text-xs">{t`Email Address`}</span>}
                 name="email"
                 rules={[
                   { required: true, message: t`Please input your email!` },
                   { type: 'email', message: t`Please enter a valid email!` }
                 ]}
               >
-                <Input placeholder={t`Email`} type="email" />
+                <Input placeholder={t`name@company.com`} type="email" className="rounded-lg" />
               </Form.Item>
 
-              <Form.Item>
-                <Button type="primary" htmlType="submit" block loading={loading}>
+              <Form.Item className="mb-2">
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  loading={loading}
+                  size="large"
+                  className="font-semibold shadow-lg shadow-indigo-500/20"
+                >
                   {t`Send Magic Code`}
                 </Button>
               </Form.Item>
             </Form>
           ) : (
             <>
-              <p style={{ marginBottom: 24 }}>{t`Enter the 6-digit code sent to ${email}`}</p>
-              <Form name="code" onFinish={handleCodeSubmit} layout="vertical">
+              <p className="text-sm text-slate-300 mb-6 text-center">
+                {t`Enter the 6-digit code sent to`}{' '}
+                <span className="font-semibold text-indigo-400">{email}</span>
+              </p>
+              <Form name="code" onFinish={handleCodeSubmit} layout="vertical" size="large">
                 <Form.Item
                   name="code"
                   rules={[
@@ -172,12 +191,19 @@ export function SignInPage() {
                   <Input
                     placeholder="000000"
                     maxLength={6}
-                    style={{ textAlign: 'center', letterSpacing: '0.5em' }}
+                    style={{ textAlign: 'center', letterSpacing: '0.5em', fontSize: '18px' }}
                   />
                 </Form.Item>
 
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" block loading={loading}>
+                <Form.Item className="mb-4">
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    block
+                    loading={loading}
+                    size="large"
+                    className="font-semibold shadow-lg shadow-indigo-500/20"
+                  >
                     {t`Verify Code`}
                   </Button>
                 </Form.Item>
@@ -187,6 +213,7 @@ export function SignInPage() {
                     type="link"
                     onClick={() => setShowCodeInput(false)}
                     style={{ padding: 0 }}
+                    className="text-xs text-slate-400 hover:text-indigo-300"
                   >
                     {t`Use a different email`}
                   </Button>
@@ -195,6 +222,7 @@ export function SignInPage() {
                     onClick={handleResendCode}
                     loading={resendLoading}
                     style={{ padding: 0 }}
+                    className="text-xs text-slate-400 hover:text-indigo-300"
                   >
                     {t`Resend code`}
                   </Button>
@@ -202,7 +230,7 @@ export function SignInPage() {
               </Form>
             </>
           )}
-        </Card>
+        </div>
       </div>
     </MainLayout>
   )

@@ -536,7 +536,7 @@ export function WorkspaceMembers({
           rowKey="user_id"
           pagination={false}
           locale={{ emptyText: t`No members found` }}
-          className="border border-gray-200 rounded-md"
+          className="border border-slate-800 rounded-md"
         />
       )}
 
@@ -573,7 +573,7 @@ export function WorkspaceMembers({
               columns={invitePermissionsColumns}
               pagination={false}
               size="small"
-              className="border border-gray-200 rounded-md"
+              className="border border-slate-800 rounded-md"
             />
           </Form.Item>
         </Form>

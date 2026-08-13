@@ -49,8 +49,23 @@ export function WorkspaceLayout() {
   const { signout, workspaces, user, refreshWorkspaces } = useAuth()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null)
   const [loadingPermissions, setLoadingPermissions] = useState(true)
+
+  // Handle window resize for mobile breakpoint
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile) {
+        setCollapsed(true)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Use useMatches to determine the current route path
   const matches = useMatches()
@@ -394,63 +409,86 @@ export function WorkspaceLayout() {
 
   return (
     <ContactsCsvUploadProvider>
-      <Layout style={{ minHeight: '100vh', backgroundColor: '#F9F9F9' }}>
+      <Layout style={{ minHeight: '100vh', backgroundColor: '#0B0F19' }}>
         <Layout>
+          {/* Mobile backdrop shadow when drawer is open */}
+          {isMobile && !collapsed && (
+            <div
+              className="fixed inset-0 bg-black/60 z-20 backdrop-blur-xs transition-opacity"
+              onClick={() => setCollapsed(true)}
+            />
+          )}
+
           <Sider
             width={250}
-            theme="light"
+            theme="dark"
             style={{
               position: 'fixed',
               height: '100vh',
               left: 0,
               top: 0,
               overflow: 'auto',
-              zIndex: 10,
-              backgroundColor: '#F9F9F9'
+              zIndex: 30,
+              backgroundColor: '#0F172A',
+              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '2px 0 10px 0 rgba(0, 0, 0, 0.3)',
+              transform: isMobile && collapsed ? 'translateX(-100%)' : 'translateX(0)',
+              transition: 'transform 0.2s ease-in-out, width 0.2s ease-in-out'
             }}
             collapsible
             collapsed={collapsed}
             trigger={null}
-            className="border-r border-gray-200"
           >
             <div
               style={{
-                // Tight header: no card chrome — wordmark sits on sidebar bg
-                padding: collapsed ? '12px 0' : '12px 16px 10px 20px',
-                textAlign: 'left',
-                borderBottom: '1px solid #f0f0f0',
+                height: '64px',
+                padding: collapsed ? '0 16px' : '0 20px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: collapsed ? 'center' : 'flex-start'
+                justify: collapsed ? 'center' : 'flex-start',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
               }}
             >
-              <img
-                src={collapsed ? '/console/icon.png' : '/console/logo.png'}
-                alt="Mail Studio"
-                style={{
-                  // Transparent wordmark (no white box in asset); ~40px reads
-                  // clearly next to 13px menu without dominating the sider.
-                  height: collapsed ? '28px' : '40px',
-                  width: 'auto',
-                  maxWidth: collapsed ? '28px' : '180px',
-                  objectFit: 'contain',
-                  display: 'block',
-                  transition: 'height 0.2s, max-width 0.2s'
-                }}
-              />
+              {collapsed ? (
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="16" x="2" y="4" rx="2"/>
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-white text-base tracking-tight leading-none">Mail Studio</span>
+                      <span className="bg-indigo-500/20 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded font-semibold border border-indigo-500/30 uppercase tracking-wider">
+                        PRO
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium leading-tight block mt-0.5">Automated Dispatch</span>
+                  </div>
+                </div>
+              )}
             </div>
             <Menu
               mode="inline"
               selectedKeys={[selectedKey]}
               style={{
-                height: 'calc(100% - 120px)',
+                height: 'calc(100% - 130px)',
                 borderRight: 0,
-                backgroundColor: '#F9F9F9',
+                backgroundColor: '#0F172A',
                 fontSize: '13px',
-                fontWeight: 600
+                fontWeight: 500,
+                padding: '12px 8px'
               }}
               items={loadingPermissions ? [] : menuItems}
-              theme="light"
+              theme="dark"
             />
             <div
               style={{
@@ -458,32 +496,28 @@ export function WorkspaceLayout() {
                 bottom: 0,
                 left: 0,
                 width: collapsed ? '80px' : '249px',
-                padding: '16px',
-                // backgroundColor: '#F9F9F9',
+                padding: '12px 16px',
+                backgroundColor: '#0F172A',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                 zIndex: 1
               }}
             >
-              <div
-                style={{
-                  borderBottom: '1px solid #f0f0f0',
-                  textAlign: 'center',
-                  fontSize: '9px',
-                  color: '#000',
-                  opacity: 0.7,
-                  marginBottom: '8px',
-                  paddingBottom: '8px'
-                }}
-              >
-                v{window.VERSION || '1.0'}
+              <div className="flex items-center justify-between">
+                {!collapsed && (
+                  <span className="text-[11px] font-medium text-slate-400">
+                    Mail Studio v{window.VERSION || '2.4'}
+                  </span>
+                )}
+                <Button
+                  type="text"
+                  size="small"
+                  className="text-slate-400 hover:text-white hover:bg-slate-800"
+                  icon={<FontAwesomeIcon icon={collapsed ? faAngleRight : faAngleLeft} />}
+                  onClick={() => setCollapsed(!collapsed)}
+                >
+                  {!collapsed && t`Collapse`}
+                </Button>
               </div>
-              <Button
-                type="text"
-                block
-                icon={<FontAwesomeIcon icon={collapsed ? faAngleRight : faAngleLeft} />}
-                onClick={() => setCollapsed(!collapsed)}
-              >
-                {!collapsed && t`Collapse`}
-              </Button>
             </div>
           </Sider>
           <Header
@@ -491,61 +525,85 @@ export function WorkspaceLayout() {
               position: 'fixed',
               top: 0,
               right: 0,
-              width: `calc(100% - ${collapsed ? '80px' : '250px'})`,
+              width: isMobile ? '100%' : `calc(100% - ${collapsed ? '80px' : '250px'})`,
               height: '64px',
-              backgroundColor: '#F9F9F9',
-              borderBottom: '1px solid #f0f0f0',
-              padding: '0 24px',
+              backgroundColor: '#0F172A',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              padding: isMobile ? '0 12px' : '0 24px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              zIndex: 9,
-              transition: 'width 0.2s'
+              zIndex: 10,
+              transition: 'width 0.2s',
+              boxShadow: '0 2px 10px 0 rgba(0, 0, 0, 0.2)'
             }}
           >
-            <Select
-              value={workspaceId}
-              variant="filled"
-              onChange={handleWorkspaceChange}
-              style={{ width: '200px' }}
-              placeholder={t`Select workspace`}
-              options={[
-                ...workspaces.map((workspace: Workspace) => ({
-                  label: (
-                    <Space size="small">
-                      {workspace.settings.logo_url && (
-                        <img
-                          src={workspace.settings.logo_url}
-                          alt=""
-                          style={{
-                            height: '14px',
-                            width: '14px',
-                            objectFit: 'contain',
-                            verticalAlign: 'middle',
-                            display: 'inline-block'
-                          }}
-                        />
-                      )}
-                      {workspace.name}
-                    </Space>
-                  ),
-                  value: workspace.id
-                })),
-                ...(isRootUser(user?.email)
-                  ? [
-                      {
-                        label: (
-                          <Space className="text-indigo-500">
-                            <FontAwesomeIcon icon={faPlus} /> {t`New workspace`}
-                          </Space>
-                        ),
-                        value: 'new-workspace'
-                      }
-                    ]
-                  : [])
-              ]}
-            />
-            <Space size="middle">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {isMobile && (
+                <Button
+                  type="text"
+                  className="text-slate-300 hover:text-white"
+                  icon={<FontAwesomeIcon icon={faBarsStaggered} />}
+                  onClick={() => setCollapsed(!collapsed)}
+                />
+              )}
+
+              <Select
+                value={workspaceId}
+                variant="filled"
+                onChange={handleWorkspaceChange}
+                style={{ width: isMobile ? '140px' : '210px' }}
+                placeholder={t`Select workspace`}
+                className="rounded-lg text-xs sm:text-sm"
+                options={[
+                  ...workspaces.map((workspace: Workspace) => ({
+                    label: (
+                      <Space size="small" className="font-medium text-slate-200">
+                        {workspace.settings.logo_url ? (
+                          <img
+                            src={workspace.settings.logo_url}
+                            alt=""
+                            style={{
+                              height: '16px',
+                              width: '16px',
+                              objectFit: 'contain',
+                              verticalAlign: 'middle',
+                              display: 'inline-block',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        ) : (
+                          <span className="w-4 h-4 rounded bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-[10px] font-bold">
+                            {workspace.name.substring(0, 1)}
+                          </span>
+                        )}
+                        {workspace.name}
+                      </Space>
+                    ),
+                    value: workspace.id
+                  })),
+                  ...(isRootUser(user?.email)
+                    ? [
+                        {
+                          label: (
+                            <Space className="text-indigo-400 font-medium">
+                              <FontAwesomeIcon icon={faPlus} /> {t`New workspace`}
+                            </Space>
+                          ),
+                          value: 'new-workspace'
+                        }
+                      ]
+                    : [])
+                ]}
+              />
+
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 text-xs font-medium">
+                <span className="pulse-dot-green"></span>
+                <span>System Operational</span>
+              </div>
+            </div>
+
+            <Space size={isMobile ? 'small' : 'middle'}>
               <Dropdown
                 trigger={['click']}
                 menu={{
@@ -553,16 +611,16 @@ export function WorkspaceLayout() {
                     {
                       key: 'docs',
                       label: (
-                        <a href="#" onClick={(e) => e.preventDefault()}>
-                          <FontAwesomeIcon icon={faFileLines} className="mr-2" /> {t`Documentation`}
+                        <a href="#" onClick={(e) => e.preventDefault()} className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faFileLines} /> {t`Documentation`}
                         </a>
                       )
                     },
                     {
                       key: 'report-issue',
                       label: (
-                        <a href="#" onClick={(e) => e.preventDefault()}>
-                          <WarningOutlined className="mr-2" />
+                        <a href="#" onClick={(e) => e.preventDefault()} className="flex items-center gap-2">
+                          <WarningOutlined />
                           {t`Report An Issue`}
                         </a>
                       )
@@ -572,11 +630,10 @@ export function WorkspaceLayout() {
                 placement="bottomRight"
               >
                 <Button
-                  color="default"
-                  variant="filled"
+                  className="bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700 text-xs px-2.5 sm:px-3"
                   icon={<FontAwesomeIcon icon={faQuestionCircle} />}
                 >
-                  {t`Help`}
+                  {!isMobile && t`Help`}
                 </Button>
               </Dropdown>
               <LanguageSwitcher />
@@ -586,8 +643,8 @@ export function WorkspaceLayout() {
                     {
                       key: 'logout',
                       label: (
-                        <Space>
-                          <FontAwesomeIcon icon={faPowerOff} size="sm" style={{ opacity: 0.7 }} />
+                        <Space className="text-red-400">
+                          <FontAwesomeIcon icon={faPowerOff} size="sm" />
                           {t`Logout`}
                         </Space>
                       ),
@@ -598,26 +655,26 @@ export function WorkspaceLayout() {
                 trigger={['click']}
                 placement="bottomRight"
               >
-                <Button type="text">
-                  <Space size="small">
-                    <Avatar src={getGravatarUrl(user?.email)} size={24} />
-                    {user?.email}
-                    <DownOutlined style={{ fontSize: '10px' }} />
-                  </Space>
-                </Button>
+                <button className="flex items-center gap-2 py-1 px-2.5 rounded-lg border border-slate-700/80 bg-slate-800/50 hover:bg-slate-800 transition-all cursor-pointer">
+                  <Avatar src={getGravatarUrl(user?.email)} size={26} className="ring-2 ring-indigo-500/40" />
+                  {!isMobile && (
+                    <span className="text-xs font-semibold text-slate-200 max-w-[140px] truncate">{user?.email}</span>
+                  )}
+                  <DownOutlined style={{ fontSize: '9px' }} className="text-slate-400" />
+                </button>
               </Dropdown>
             </Space>
           </Header>
           <Layout
             style={{
-              marginLeft: collapsed ? '80px' : '250px',
+              marginLeft: isMobile ? '0' : (collapsed ? '80px' : '250px'),
               marginTop: '64px',
-              padding: isSettingsPage ? '0' : '24px',
+              padding: isSettingsPage ? '0' : (isMobile ? '12px 8px' : '24px'),
               transition: 'margin-left 0.2s',
-              backgroundColor: '#F9F9F9'
+              backgroundColor: '#0B0F19'
             }}
           >
-            <Content style={{ backgroundColor: '#F9F9F9' }}>
+            <Content style={{ backgroundColor: '#0B0F19' }}>
               <FileManagerProvider
                 key={`fm-${workspaceId}-${!userPermissions?.templates?.write}`}
                 settings={workspaces.find((w) => w.id === workspaceId)?.settings.file_manager}

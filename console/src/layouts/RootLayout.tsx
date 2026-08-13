@@ -85,9 +85,23 @@ export function RootLayout() {
   ) {
     return (
       <div
-        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#0b0f19',
+          gap: '20px'
+        }}
       >
-        <Spin size="large" tip={t`Loading...`} fullscreen />
+        <div style={{ fontSize: '30px', fontWeight: 800, letterSpacing: '-0.03em', color: '#ffffff', textShadow: '0 0 20px rgba(99,102,241,0.6)' }}>
+          Mail Studio<span style={{ color: '#6366F1' }}>.</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <Spin size="large" />
+          <span style={{ color: '#94A3B8', fontSize: '14px', fontWeight: 500 }}>{t`Loading...`}</span>
+        </div>
       </div>
     )
   }

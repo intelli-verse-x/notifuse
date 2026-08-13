@@ -118,7 +118,7 @@ export function BlogPage() {
       <Sider
         width={250}
         style={{
-          borderRight: '1px solid #f0f0f0',
+          borderRight: '1px solid #242424',
           overflow: 'auto'
         }}
       >

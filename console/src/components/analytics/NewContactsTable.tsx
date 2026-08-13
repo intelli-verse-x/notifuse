@@ -67,7 +67,14 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
       title: t`Email`,
       dataIndex: 'email',
       key: 'email',
-      render: (email: string) => <span className="text-sm">{email}</span>
+      render: (email: string) => (
+        <div className="flex items-center">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center mr-2.5 shadow-md shadow-indigo-500/20">
+            {(email || 'U').substring(0, 1).toUpperCase()}
+          </div>
+          <span className="text-xs font-semibold text-slate-200">{email}</span>
+        </div>
+      )
     },
     {
       title: t`Lists`,
@@ -142,7 +149,7 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
                     bordered={false}
                     color={color}
                     style={{ marginBottom: '2px' }}
-                    className="text-xs"
+                    className="text-xs rounded-md"
                   >
                     {icon}
                     {listName}
@@ -159,26 +166,26 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
       key: 'name',
       render: (record: Contact) => {
         const name = [record.first_name, record.last_name].filter(Boolean).join(' ')
-        return <span className="text-sm">{name || '-'}</span>
+        return <span className="text-xs font-medium text-slate-300">{name || '-'}</span>
       }
     },
     {
       title: t`Language`,
       dataIndex: 'language',
       key: 'language',
-      render: (language: string) => <span className="text-sm">{language || '-'}</span>
+      render: (language: string) => <span className="text-xs text-slate-400">{language || '-'}</span>
     },
     {
       title: t`Timezone`,
       dataIndex: 'timezone',
       key: 'timezone',
-      render: (timezone: string) => <span className="text-sm">{timezone || '-'}</span>
+      render: (timezone: string) => <span className="text-xs text-slate-400">{timezone || '-'}</span>
     },
     {
       title: t`Country`,
       dataIndex: 'country',
       key: 'country',
-      render: (country: string) => <span className="text-sm">{country || '-'}</span>
+      render: (country: string) => <span className="text-xs text-slate-400">{country || '-'}</span>
     },
     {
       title: t`Since`,
@@ -186,7 +193,7 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
       key: 'created_at',
       render: (date: string) => (
         <span
-          className="text-xs text-gray-500"
+          className="text-xs font-medium text-slate-400"
           title={dayjs(date).tz(workspace.settings.timezone).format('lll')}
         >
           {dayjs(date).fromNow()}
@@ -195,16 +202,23 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
     }
   ]
 
-  const cardExtra = (
-    <Button type="link" size="small" onClick={handleViewMore}>
-      {t`View more`}
-    </Button>
-  )
-
   return (
-    <Card title={t`Recent New Contacts`} extra={cardExtra}>
+    <div className="mailstudio-card p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+        <div>
+          <h2 className="text-sm sm:text-base font-bold text-white tracking-tight m-0">{t`Recent New Contacts`}</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-0">{t`Latest subscribers and contacts joined`}</p>
+        </div>
+        <button
+          onClick={handleViewMore}
+          className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
+        >
+          {t`View all contacts →`}
+        </button>
+      </div>
+
       {error ? (
-        <div className="text-red-500 p-4">
+        <div className="text-red-500 p-4 text-xs">
           <p>{t`Error`}: {error}</p>
         </div>
       ) : (
@@ -216,8 +230,9 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
           loading={loading}
           size="small"
           showHeader={true}
+          scroll={{ x: 'max-content' }}
         />
       )}
-    </Card>
+    </div>
   )
 }

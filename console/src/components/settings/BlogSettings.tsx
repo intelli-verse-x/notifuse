@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Form, App, Descriptions, Input, Divider, Select, Row, Col } from 'antd'
+import { Button, Form, App, Descriptions, Input, Divider, Select, Row, Col, Alert } from 'antd'
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -240,23 +240,18 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSe
       />
 
       {!workspace?.settings.custom_endpoint_url && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: '12px 16px',
-            background: '#fff7e6',
-            border: '1px solid #ffd591',
-            borderRadius: '4px'
-          }}
-        >
-          {t`You must configure a Custom Endpoint URL in General Settings above before enabling the blog.`}
-        </div>
+        <Alert
+          type="warning"
+          showIcon
+          className="mb-6 bg-amber-950/40 border border-amber-800/80 text-amber-200"
+          message={t`You must configure a Custom Endpoint URL in General Settings above before enabling the blog.`}
+        />
       )}
 
       {workspace?.settings.blog_enabled && workspace?.settings.custom_endpoint_url && (
         <>
           <RecentThemesTable workspaceId={workspace.id} workspace={workspace} />
-          <Divider className="!my-12" />
+          <Divider className="!my-12 border-slate-800/80" />
         </>
       )}
 
@@ -268,19 +263,11 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSe
       >
         {/* Show enable button only when blog is disabled */}
         {!workspace?.settings.blog_enabled && (
-          <div
-            style={{
-              padding: '24px',
-              border: '1px solid #d9d9d9',
-              borderRadius: '8px',
-              backgroundColor: '#fafafa',
-              marginBottom: 24
-            }}
-          >
-            <h3 style={{ marginBottom: 8, fontSize: '16px', fontWeight: 600 }}>{t`Enable Blog`}</h3>
-            <p style={{ marginBottom: 16, color: '#595959', lineHeight: '1.6' }}>
+          <div className="mailstudio-card p-6 mb-6">
+            <h3 className="text-base font-bold text-white mb-2">{t`Enable Blog`}</h3>
+            <p className="text-sm text-slate-400 mb-4 leading-relaxed">
               {t`Enable the blog feature to publish articles and content on your custom domain homepage. Your blog will be accessible at`}{' '}
-              <strong>
+              <strong className="text-indigo-300">
                 {workspace?.settings.custom_endpoint_url || 'your-custom-domain.com'}/
               </strong>
             </p>
@@ -450,18 +437,10 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSe
       {/* Danger Zone - Show when blog is enabled */}
       {workspace?.settings.blog_enabled && (
         <>
-          <Divider className="!my-12" />
-          <div
-            style={{
-              marginTop: 32,
-              padding: '24px',
-              border: '1px solid #ff4d4f',
-              borderRadius: '4px',
-              backgroundColor: '#fff1f0'
-            }}
-          >
-            <h3 style={{ color: '#cf1322', marginBottom: 8 }}>{t`Danger Zone`}</h3>
-            <p style={{ marginBottom: 16, color: '#595959' }}>
+          <Divider className="!my-12 border-slate-800/80" />
+          <div className="p-6 rounded-xl border border-red-900/60 bg-red-950/30 mt-8">
+            <h3 className="text-red-400 font-bold text-base mb-2">{t`Danger Zone`}</h3>
+            <p className="text-sm text-slate-400 mb-4">
               {t`Disabling the blog will remove all SEO settings and make your blog inaccessible to visitors. This action will affect your blog's visibility and search engine rankings.`}
             </p>
             <Button danger onClick={handleDisableBlog}>

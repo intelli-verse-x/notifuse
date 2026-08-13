@@ -640,7 +640,7 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
         />
       </div>
 
-      <div className={`bg-gradient-to-br from-gray-50 to-violet-50 border-t border-gray-200`}>
+      <div className="bg-slate-900/80 border-t border-white/10">
         <div className="text-center py-2">
           <Button type="link" onClick={() => setShowDetails(!showDetails)}>
             {showDetails ? (
@@ -905,7 +905,7 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
                 size="small"
                 pagination={false}
                 scroll={{ x: 'max-content' }}
-                rowClassName={(record) => (record.isWinner ? 'bg-green-50' : '')}
+                rowClassName={(record) => (record.isWinner ? 'bg-emerald-500/10' : '')}
               />
             </div>
 

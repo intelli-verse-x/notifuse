@@ -7,26 +7,26 @@
 
 /* Selection highlight */
 .react-flow__node.selected .automation-node {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
 /* Custom edge styles */
 .react-flow__edge-path {
-  stroke: #b1b1b7;
+  stroke: #64748b;
   stroke-width: 2;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #1890ff;
+  stroke: #6366f1;
 }
 
 /* Handle styles */
 .react-flow__handle {
   width: 10px;
   height: 10px;
-  background-color: #1890ff;
-  border: 2px solid #fff;
+  background-color: #6366f1;
+  border: 2px solid #0f172a;
   transition: all 0.15s ease;
 }
 
@@ -46,21 +46,33 @@
 
 /* Background */
 .react-flow__background {
-  background-color: #fafafa;
+  background-color: #020617;
 }
 
 /* Controls */
 .react-flow__controls {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .react-flow__controls-button {
-  border-bottom: 1px solid #f0f0f0;
+  background: #111827 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  fill: #cbd5e1 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #1e293b !important;
 }
 
 .react-flow__controls-button:last-child {
-  border-bottom: none;
+  border-bottom: none !important;
+}
+
+.react-flow__minimap {
+  background-color: #0f172a !important;
 }
 
 /* Add node button on edges */

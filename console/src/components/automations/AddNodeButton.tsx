@@ -94,10 +94,9 @@ export const AddNodeButton: React.FC<AddNodeButtonProps> = ({
         const button = (
           <button
             key={item.key}
-            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
-              isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'
+            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-slate-200 ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800 cursor-pointer'
             }`}
-            style={{ color: '#374151' }}
             onClick={() => {
               if (isDisabled) return
               onSelectNodeType(item.key)
@@ -132,7 +131,7 @@ export const AddNodeButton: React.FC<AddNodeButtonProps> = ({
           overlayInnerStyle={{ padding: 0 }}
         >
           <button
-            className={`add-node-button flex items-center justify-center ${buttonSize} rounded-full ${shadowSize} border-2 border-white cursor-pointer transition-transform hover:scale-110`}
+            className={`add-node-button flex items-center justify-center ${buttonSize} rounded-full ${shadowSize} border-2 border-slate-900 cursor-pointer transition-transform hover:scale-110`}
           >
             <Plus size={iconSize} color="white" />
           </button>

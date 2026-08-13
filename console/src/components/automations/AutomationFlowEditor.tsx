@@ -387,27 +387,27 @@ const AutomationFlowEditorInner: React.FC = () => {
         maxZoom={1.5}
         defaultViewport={{ x: 50, y: 50, zoom: 1 }}
         deleteKeyCode={['Backspace', 'Delete']}
-        className="bg-gray-50"
+        className="bg-slate-950"
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#334155" />
         <Controls position="top-left" showInteractive={false} />
         <Panel position="top-left" style={{ marginTop: 120 }}>
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
+          <div className="bg-slate-900 border border-white/10 rounded shadow-sm">
             <Tooltip title={t`Reorganize layout`} placement="right">
               <button
-                className="flex items-center justify-center w-7 h-7 hover:bg-gray-100 cursor-pointer"
+                className="flex items-center justify-center w-7 h-7 hover:bg-slate-800 cursor-pointer"
                 onClick={handleReorganize}
               >
-                <LayoutGrid size={16} className="text-gray-600" />
+                <LayoutGrid size={16} className="text-slate-300" />
               </button>
             </Tooltip>
           </div>
         </Panel>
         <Panel position="bottom-left">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-            <div className="text-xs text-gray-500 px-2 py-2 border-b border-gray-200">{t`Minimap`}</div>
-            <MiniMap position="top-left" bgColor="white" maskColor="transparent" style={{ position: 'relative', margin: 0 }} />
+          <div className="bg-slate-900 border border-white/10 rounded-lg shadow-sm overflow-hidden">
+            <div className="text-xs text-slate-400 px-2 py-2 border-b border-white/10">{t`Minimap`}</div>
+            <MiniMap position="top-left" bgColor="#0f172a" maskColor="rgba(15, 23, 42, 0.7)" style={{ position: 'relative', margin: 0 }} />
           </div>
         </Panel>
       </ReactFlow>
@@ -435,7 +435,7 @@ const AutomationFlowEditorInner: React.FC = () => {
       {/* Fixed Node Configuration Panel - Top Right */}
       {selectedNode && (
         <div
-          className={`absolute bg-white border border-gray-200 rounded-lg shadow-lg ${
+          className={`absolute bg-slate-900 border border-white/10 rounded-lg shadow-lg ${
             selectedNode.data.nodeType === 'filter' ? 'w-[640px]' : 'w-[480px]'
           }`}
           style={{

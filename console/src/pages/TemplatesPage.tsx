@@ -384,7 +384,7 @@ export function TemplatesPage() {
           dataSource={data.templates}
           rowKey="id"
           pagination={{ hideOnSinglePage: true }}
-          className="border border-gray-200 rounded-md"
+          className="border border-white/10 rounded-md overflow-hidden"
         />
       ) : (
         <div className="text-center py-12">

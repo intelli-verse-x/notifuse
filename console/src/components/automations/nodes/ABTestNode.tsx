@@ -62,7 +62,7 @@ export const ABTestNode: React.FC<ABTestNodeProps> = ({ data, selected }) => {
             {variants.map((variant) => (
               <div
                 key={variant.id}
-                className="text-xs bg-gray-100 px-2 py-1 rounded"
+                className="text-xs bg-slate-800 text-slate-200 px-2 py-1 rounded"
               >
                 {variant.name}: {variant.weight}%
               </div>

@@ -164,10 +164,45 @@ th.ant-table-cell.contacts-fixed-col,
   border-left-color: #ff4d4f !important;
 }
 
+/* Soften light utility leftovers that fight dark theme */
+.border-gray-200,
+.border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.bg-gray-50,
+.bg-gray-100 {
+  background-color: #1e293b !important;
+}
+
 /* Thin dark scrollbars (Firefox + Chromium) */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+.ant-layout-sider,
+.ant-layout-sider-children,
+.ant-menu {
+  scrollbar-width: none;
+}
+
+.ant-layout-sider:hover,
+.ant-layout-sider-children:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+.ant-layout-sider::-webkit-scrollbar,
+.ant-layout-sider-children::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.ant-layout-sider:hover::-webkit-scrollbar,
+.ant-layout-sider-children:hover::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
 
 *::-webkit-scrollbar {

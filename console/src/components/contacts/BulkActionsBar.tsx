@@ -111,9 +111,9 @@ export function BulkActionsBar({
 
   return (
     <>
-      <div className="mb-4 rounded-md bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-500 p-[1px]">
-        <div className="flex items-center gap-3 rounded-md bg-slate-900 px-3 py-2 text-slate-100">
-        <Text strong>
+      <div className="mb-0 rounded-xl border border-indigo-400/35 bg-slate-900 px-3 py-2.5 text-slate-100 shadow-[0_0_0_1px_rgba(99,102,241,0.08)]">
+        <div className="flex items-center gap-3 flex-wrap">
+        <Text strong className="!text-slate-100">
           <Plural
             value={selectedCount}
             one="# contact selected"
@@ -179,7 +179,7 @@ export function BulkActionsBar({
             </span>
           </Tooltip>
         </Space>
-          <Button type="text" icon={<CloseOutlined />} onClick={onClear} className="ml-auto">
+          <Button type="text" icon={<CloseOutlined />} onClick={onClear} className="ml-auto text-slate-300">
             {t`Clear`}
           </Button>
         </div>

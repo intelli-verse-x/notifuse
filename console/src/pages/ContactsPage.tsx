@@ -981,114 +981,129 @@ export function ContactsPage() {
   const showEmptyState = !isLoading && !isFetching && contacts.length === 0
 
   return (
-    <div className="p-6">
-      {/* Header with title and actions */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <div className="text-2xl font-medium">{t`Contacts`}</div>
-          {totalContactsData?.total_contacts !== undefined && (
-            <Tag bordered={false} color="blue">
-              {numbro(totalContactsData.total_contacts).format({
-                thousandSeparated: true,
-                mantissa: 0
-              })}
-            </Tag>
-          )}
-        </div>
-        <Space>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'import',
-                  label: t`Import`,
-                  icon: <UploadOutlined />,
-                  disabled: !permissions?.contacts?.write,
-                  onClick: () => openImportDrawer(workspaceId, listsData?.lists || [], true)
-                },
-                {
-                  key: 'export',
-                  label: t`Export`,
-                  icon: <DownloadOutlined />,
-                  onClick: () => setExportModalVisible(true)
-                }
-              ]
-            }}
-          >
-            <Button type="text">CSV</Button>
-          </Dropdown>
-          <Tooltip
-            title={
-              !permissions?.contacts?.write
-                ? t`You don't have write permission for contacts`
-                : undefined
-            }
-          >
-            <span>
-              <BulkUpdateDrawer
-                workspaceId={workspaceId}
-                lists={listsData?.lists || []}
-                buttonProps={{
-                  type: 'text',
-                  children: t`Bulk Update`,
-                  disabled: !permissions?.contacts?.write
-                }}
-              />
-            </span>
-          </Tooltip>
-          <Tooltip
-            title={
-              !permissions?.contacts?.write
-                ? t`You don't have write permission for contacts`
-                : undefined
-            }
-          >
-            <div>
-              <ContactUpsertDrawer
-                workspace={currentWorkspace}
-                buttonProps={{
-                  buttonContent: (
-                    <>
-                      <PlusOutlined /> {t`Add`}
-                    </>
-                  ),
-                  disabled: !permissions?.contacts?.write
-                }}
-              />
+    <div className="p-6 space-y-4">
+      {/* Audience header strip */}
+      <div className="mailstudio-card px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+                {t`Audience`}
+              </h1>
+              {totalContactsData?.total_contacts !== undefined && (
+                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                  {numbro(totalContactsData.total_contacts).format({
+                    thousandSeparated: true,
+                    mantissa: 0
+                  })}
+                </span>
+              )}
             </div>
-          </Tooltip>
-        </Space>
+            <p className="mt-1 mb-0 text-sm text-slate-400">
+              {t`People in your dispatch database`}
+            </p>
+          </div>
+          <Space wrap size="middle">
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'import',
+                    label: t`Import`,
+                    icon: <UploadOutlined />,
+                    disabled: !permissions?.contacts?.write,
+                    onClick: () => openImportDrawer(workspaceId, listsData?.lists || [], true)
+                  },
+                  {
+                    key: 'export',
+                    label: t`Export`,
+                    icon: <DownloadOutlined />,
+                    onClick: () => setExportModalVisible(true)
+                  }
+                ]
+              }}
+            >
+              <Button>{t`Import / Export`}</Button>
+            </Dropdown>
+            <Tooltip
+              title={
+                !permissions?.contacts?.write
+                  ? t`You don't have write permission for contacts`
+                  : undefined
+              }
+            >
+              <span>
+                <BulkUpdateDrawer
+                  workspaceId={workspaceId}
+                  lists={listsData?.lists || []}
+                  buttonProps={{
+                    children: t`Bulk Update`,
+                    disabled: !permissions?.contacts?.write
+                  }}
+                />
+              </span>
+            </Tooltip>
+            <Tooltip
+              title={
+                !permissions?.contacts?.write
+                  ? t`You don't have write permission for contacts`
+                  : undefined
+              }
+            >
+              <div>
+                <ContactUpsertDrawer
+                  workspace={currentWorkspace}
+                  buttonProps={{
+                    type: 'primary',
+                    buttonContent: (
+                      <>
+                        <PlusOutlined /> {t`Add contact`}
+                      </>
+                    ),
+                    disabled: !permissions?.contacts?.write
+                  }}
+                />
+              </div>
+            </Tooltip>
+          </Space>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="text-sm font-medium">{t`Filters:`}</div>
-        <Filter fields={filterFields} activeFilters={activeFilters} />
+      {/* Filters + segments control deck */}
+      <div className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 space-y-3">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 pt-1.5 shrink-0">
+            {t`Filters`}
+          </div>
+          <div className="flex-1 min-w-0">
+            <Filter fields={filterFields} activeFilters={activeFilters} />
+          </div>
+        </div>
+        <div className="border-t border-white/5 pt-3">
+          <SegmentsFilter
+            workspaceId={workspaceId}
+            segments={segmentsData?.segments || []}
+            selectedSegmentIds={search.segments}
+            totalContacts={totalContactsData?.total_contacts}
+            onSegmentToggle={(segmentId: string) => {
+              const currentSegments = search.segments || []
+              const newSegments = currentSegments.includes(segmentId)
+                ? currentSegments.filter((id) => id !== segmentId)
+                : [...currentSegments, segmentId]
+
+              navigate({
+                to: workspaceContactsRoute.to,
+                params: { workspaceId },
+                search: {
+                  ...search,
+                  segments: newSegments.length > 0 ? newSegments : undefined,
+                  limit: undefined // Reset pagination when filters change
+                }
+              })
+            }}
+          />
+        </div>
       </div>
-
-      {/* Segments */}
-      <SegmentsFilter
-        workspaceId={workspaceId}
-        segments={segmentsData?.segments || []}
-        selectedSegmentIds={search.segments}
-        totalContacts={totalContactsData?.total_contacts}
-        onSegmentToggle={(segmentId: string) => {
-          const currentSegments = search.segments || []
-          const newSegments = currentSegments.includes(segmentId)
-            ? currentSegments.filter((id) => id !== segmentId)
-            : [...currentSegments, segmentId]
-
-          navigate({
-            to: workspaceContactsRoute.to,
-            params: { workspaceId },
-            search: {
-              ...search,
-              segments: newSegments.length > 0 ? newSegments : undefined,
-              limit: undefined // Reset pagination when filters change
-            }
-          })
-        }}
-      />
 
       {/* Bulk actions bar — appears when rows are selected */}
       <BulkActionsBar
@@ -1104,51 +1119,53 @@ export function ContactsPage() {
         onClear={() => setSelectedEmails([])}
       />
 
-      {/* Contacts Table */}
-      <Table
-        columns={columns}
-        dataSource={contacts}
-        rowKey={(record) => record.email}
-        loading={isLoading}
-        pagination={false}
-        scroll={{ x: 'max-content' }}
-        style={{ minWidth: 800 }}
-        rowSelection={{
-          selectedRowKeys: selectedEmails,
-          onChange: (keys) => setSelectedEmails(keys as string[]),
-          getCheckboxProps: () => ({
-            disabled: !permissions?.contacts?.write
-          })
-        }}
-        onRow={(record) => ({
-          onClick: (e) => {
-            if (!permissions?.contacts?.write) return
-            // Ignore clicks inside the selection column (checkbox handles itself)
-            // or the fixed-right actions column (dropdown + detail drawer).
-            const target = e.target as HTMLElement
-            if (
-              target.closest(
-                '.ant-table-selection-column, .ant-table-cell-fix-right'
+      {/* Audience table */}
+      <div className="mailstudio-card overflow-hidden border border-white/10">
+        <Table
+          columns={columns}
+          dataSource={contacts}
+          rowKey={(record) => record.email}
+          loading={isLoading}
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+          style={{ minWidth: 800 }}
+          rowSelection={{
+            selectedRowKeys: selectedEmails,
+            onChange: (keys) => setSelectedEmails(keys as string[]),
+            getCheckboxProps: () => ({
+              disabled: !permissions?.contacts?.write
+            })
+          }}
+          onRow={(record) => ({
+            onClick: (e) => {
+              if (!permissions?.contacts?.write) return
+              // Ignore clicks inside the selection column (checkbox handles itself)
+              // or the fixed-right actions column (dropdown + detail drawer).
+              const target = e.target as HTMLElement
+              if (
+                target.closest(
+                  '.ant-table-selection-column, .ant-table-cell-fix-right'
+                )
               )
-            )
-              return
-            setSelectedEmails((prev) =>
-              prev.includes(record.email)
-                ? prev.filter((email) => email !== record.email)
-                : [...prev, record.email]
-            )
-          },
-          style: permissions?.contacts?.write ? { cursor: 'pointer' } : undefined
-        })}
-        locale={{
-          emptyText: showEmptyState
-            ? t`No contacts found. Add some contacts to get started.`
-            : t`Loading...`
-        }}
-      />
+                return
+              setSelectedEmails((prev) =>
+                prev.includes(record.email)
+                  ? prev.filter((email) => email !== record.email)
+                  : [...prev, record.email]
+              )
+            },
+            style: permissions?.contacts?.write ? { cursor: 'pointer' } : undefined
+          })}
+          locale={{
+            emptyText: showEmptyState
+              ? t`No people in this audience yet. Add a contact to get started.`
+              : t`Loading...`
+          }}
+        />
+      </div>
 
       {data?.next_cursor && (
-        <div className="flex justify-center mt-4">
+        <div className="flex justify-center pt-1">
           <Button onClick={handleLoadMore} loading={isLoading || isFetching}>
             {t`Load More`}
           </Button>

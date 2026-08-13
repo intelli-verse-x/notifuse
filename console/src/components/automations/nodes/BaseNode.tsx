@@ -43,27 +43,27 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
             okButtonProps={{ danger: true }}
           >
             <Tooltip title={t`Delete node`} placement="right">
-              <button className="flex items-center justify-center w-6 h-6 rounded-full bg-white hover:bg-red-50 shadow-md border border-gray-200 cursor-pointer transition-transform hover:scale-110">
-                <Trash2 size={14} className="text-gray-400 hover:text-red-500" />
+              <button className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 hover:bg-red-950 shadow-md border border-white/15 cursor-pointer transition-transform hover:scale-110">
+                <Trash2 size={14} className="text-slate-400 hover:text-red-400" />
               </button>
             </Tooltip>
           </Popconfirm>
         </div>
       )}
       <div
-        className="automation-node bg-white rounded"
+        className="automation-node bg-slate-900 rounded text-slate-100"
         style={{
           padding: '8px 12px',
           minWidth: '300px',
-          border: selected ? '1px solid #7763F1' : isOrphan ? '1px solid #f97316' : '1px solid #e5e7eb',
+          border: selected ? '1px solid #7763F1' : isOrphan ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.12)',
           boxShadow: selected ? '0 4px 12px rgba(119,99,241,0.3)' : 'none'
         }}
       >
         <div className="flex items-center gap-1.5">
-          <span style={{ color: selected ? '#7763F1' : '#6b7280' }}>{icon}</span>
+          <span style={{ color: selected ? '#7763F1' : '#94a3b8' }}>{icon}</span>
           <span style={{ fontSize: '16px', fontWeight: 500 }}>{label}</span>
         </div>
-        {children && <div style={{ fontSize: '14px', color: '#888', marginTop: '8px' }}>{children}</div>}
+        {children && <div style={{ fontSize: '14px', color: '#94a3b8', marginTop: '8px' }}>{children}</div>}
       </div>
     </div>
   )

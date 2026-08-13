@@ -123,7 +123,7 @@ function DrawerContent({ onCloseDrawer }: { onCloseDrawer: () => void }) {
   return (
     <>
       {/* Header with title and actions */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950 text-slate-100">
         <Space>
           <span className="text-lg font-medium">
             {isEditing ? t`Edit Automation` : t`Create Automation`}
@@ -161,7 +161,7 @@ function DrawerContent({ onCloseDrawer }: { onCloseDrawer: () => void }) {
       </div>
 
       {/* Form Header */}
-      <div className="p-4 border-b border-gray-200 bg-white">
+      <div className="p-4 border-b border-white/10 bg-slate-900">
         <Form layout="inline">
           <Form.Item
             label={t`Name`}

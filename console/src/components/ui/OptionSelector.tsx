@@ -41,14 +41,14 @@ export function OptionSelector<T = string>({
               p-3 rounded-lg border transition-all
               ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
               ${isSelected
-                ? 'border-primary bg-primary/5'
-                : 'border-gray-200 hover:border-gray-300'
+                ? 'border-primary bg-primary/15 text-slate-100'
+                : 'border-white/10 hover:border-white/25 bg-slate-800/40 text-slate-200'
               }
             `}
           >
             <div className="font-medium">{option.label}</div>
             {option.description && (
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-slate-400 mt-1">
                 {option.description}
               </div>
             )}

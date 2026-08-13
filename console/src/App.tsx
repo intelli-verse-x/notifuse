@@ -101,6 +101,23 @@ const theme: ThemeConfig = {
     },
     Timeline: {
       dotBg: '#111827'
+    },
+    Input: {
+      colorBgContainer: '#111827',
+      colorBorder: 'rgba(255, 255, 255, 0.12)',
+      activeBorderColor: '#6366F1',
+      hoverBorderColor: 'rgba(255, 255, 255, 0.2)',
+      colorText: '#F8FAFC',
+      colorTextPlaceholder: '#64748B'
+    },
+    Select: {
+      colorBgContainer: '#111827',
+      colorBorder: 'rgba(255, 255, 255, 0.12)',
+      optionSelectedBg: '#334155'
+    },
+    Descriptions: {
+      colorTextSecondary: '#94A3B8',
+      labelBg: 'transparent'
     }
   }
 }

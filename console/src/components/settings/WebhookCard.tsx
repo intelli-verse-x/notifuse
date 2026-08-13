@@ -254,7 +254,7 @@ export function WebhookCard({
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-gray-500 text-sm">{t`URL:`}</span>
-          <code className="text-sm bg-gray-100 px-2 py-1 rounded truncate flex-1">
+          <code className="text-sm bg-slate-800 text-slate-200 border border-white/10 px-2 py-1 rounded truncate flex-1">
             {webhook.url}
           </code>
         </div>

@@ -176,11 +176,12 @@ export function WorkspaceSettingsPage() {
   }
 
   return (
-    <Layout style={{ minHeight: 'calc(100vh - 48px)' }}>
+    <Layout className="!bg-transparent" style={{ minHeight: 'calc(100vh - 48px)' }}>
       <Sider
-        width={250}
+        width={240}
+        className="!bg-transparent"
         style={{
-          borderRight: '1px solid #f0f0f0',
+          borderRight: '1px solid rgba(255,255,255,0.08)',
           overflow: 'auto'
         }}
       >
@@ -190,9 +191,9 @@ export function WorkspaceSettingsPage() {
           isOwner={isOwner}
         />
       </Sider>
-      <Layout>
-        <Content>
-          <div style={{ maxWidth: '700px', padding: '24px' }}>{renderSection()}</div>
+      <Layout className="!bg-transparent">
+        <Content className="!bg-transparent">
+          <div className="max-w-5xl p-6">{renderSection()}</div>
         </Content>
       </Layout>
     </Layout>

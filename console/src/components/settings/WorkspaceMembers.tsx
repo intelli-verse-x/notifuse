@@ -24,7 +24,6 @@ import { WorkspaceMember, UserPermissions } from '../../services/api/types'
 import { workspaceService } from '../../services/api/workspace'
 import { ApiError } from '../../services/api/client'
 import { EditPermissionsModal } from './EditPermissionsModal'
-import { SettingsSectionHeader } from './SettingsSectionHeader'
 
 const { Text } = Typography
 
@@ -509,35 +508,56 @@ export function WorkspaceMembers({
   ]
 
   return (
-    <>
-      <SettingsSectionHeader title={t`Team`} description={t`Manage your workspace members`} />
-
-      {isOwner && (
-        <div className="flex justify-end mb-4">
-          <Space size="middle">
-            <Button type="primary" size="small" ghost onClick={() => setApiKeyModalVisible(true)}>
-              {t`Create API Key`}
-            </Button>
-            <Button type="primary" size="small" ghost onClick={() => setInviteModalVisible(true)}>
-              {t`Invite Member`}
-            </Button>
-          </Space>
+    <div className="space-y-4">
+      <div className="mailstudio-card px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+                {t`Team`}
+              </h1>
+              {!loading && (
+                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                  {members.length}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 mb-0 text-sm text-slate-400">
+              {t`Manage workspace members and API keys`}
+            </p>
+          </div>
+          {isOwner && (
+            <Space size="middle" wrap>
+              <Button onClick={() => setApiKeyModalVisible(true)}>{t`Create API key`}</Button>
+              <Button type="primary" onClick={() => setInviteModalVisible(true)}>
+                {t`Invite member`}
+              </Button>
+            </Space>
+          )}
         </div>
-      )}
+      </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
+        <div className="mailstudio-card px-6 py-14 text-center">
           <Spin />
         </div>
+      ) : members.length === 0 ? (
+        <div className="mailstudio-card px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No members yet`}</h2>
+          <p className="mt-2 mb-0 text-sm text-slate-400">
+            {t`Invite teammates or create an API key to get started.`}
+          </p>
+        </div>
       ) : (
-        <Table
-          dataSource={members}
-          columns={columns}
-          rowKey="user_id"
-          pagination={false}
-          locale={{ emptyText: t`No members found` }}
-          className="border border-slate-800 rounded-md"
-        />
+        <div className="mailstudio-card overflow-hidden border border-white/10">
+          <Table
+            dataSource={members}
+            columns={columns}
+            rowKey="user_id"
+            pagination={false}
+            locale={{ emptyText: t`No members found` }}
+          />
+        </div>
       )}
 
       <Modal
@@ -660,6 +680,6 @@ export function WorkspaceMembers({
         onClose={handlePermissionsModalClose}
         onSuccess={handlePermissionsSuccess}
       />
-    </>
+    </div>
   )
 }

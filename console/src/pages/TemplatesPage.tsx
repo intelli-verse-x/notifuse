@@ -32,7 +32,7 @@ import TemplatePreviewDrawer from '../components/templates/TemplatePreviewDrawer
 import SendTemplateModal from '../components/templates/SendTemplateModal'
 import { useLingui } from '@lingui/react/macro'
 
-const { Title, Paragraph, Text } = Typography
+const { Text } = Typography
 
 // Helper function to get integration icon
 const getIntegrationIcon = (integrationType: string) => {
@@ -343,91 +343,117 @@ export function TemplatesPage() {
   ]
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-2xl font-medium">{t`Templates`}</div>
-        {workspace && data?.templates && data.templates.length > 0 && (
-          <Tooltip
-            title={
-              !permissions?.templates?.write
-                ? t`You don't have write permission for templates`
-                : undefined
-            }
-          >
-            <div>
-              <CreateTemplateDrawer
-                workspace={workspace}
-                buttonProps={{
-                  disabled: !permissions?.templates?.write
-                }}
-              />
+    <div className="p-6 space-y-4">
+      {/* Mail designs header strip */}
+      <div className="mailstudio-card px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+                {t`Mail designs`}
+              </h1>
+              {!isLoading && data?.templates && (
+                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                  {data.templates.length}
+                </span>
+              )}
             </div>
-          </Tooltip>
-        )}
+            <p className="mt-1 mb-0 text-sm text-slate-400">
+              {t`Reusable email layouts for broadcasts and automations`}
+            </p>
+          </div>
+          {workspace && (
+            <Tooltip
+              title={
+                !permissions?.templates?.write
+                  ? t`You don't have write permission for templates`
+                  : undefined
+              }
+            >
+              <div>
+                <CreateTemplateDrawer
+                  workspace={workspace}
+                  buttonProps={{
+                    type: 'primary',
+                    disabled: !permissions?.templates?.write
+                  }}
+                />
+              </div>
+            </Tooltip>
+          )}
+        </div>
       </div>
 
-      <div className="mb-4">
-        <Segmented
-          options={categories}
-          // Use selectedCategory from search params as value
-          value={selectedCategory}
-          // Update search params on change
-          onChange={(value) => setSelectedCategory(value as string)}
-        />
+      {/* Category control deck */}
+      <div className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 pt-1.5 shrink-0">
+            {t`Category`}
+          </div>
+          <div className="flex-1 min-w-0">
+            <Segmented
+              options={categories}
+              value={selectedCategory}
+              onChange={(value) => setSelectedCategory(value as string)}
+            />
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
-        <Table columns={columns} dataSource={[]} loading={true} rowKey="id" />
+        <div className="mailstudio-card overflow-hidden border border-white/10">
+          <Table columns={columns} dataSource={[]} loading={true} rowKey="id" />
+        </div>
       ) : hasTemplates ? (
-        <Table
-          columns={columns}
-          dataSource={data.templates}
-          rowKey="id"
-          pagination={{ hideOnSinglePage: true }}
-          className="border border-white/10 rounded-md overflow-hidden"
-        />
+        <div className="mailstudio-card overflow-hidden border border-white/10">
+          <Table
+            columns={columns}
+            dataSource={data.templates}
+            rowKey="id"
+            pagination={{ hideOnSinglePage: true }}
+          />
+        </div>
       ) : (
-        <div className="text-center py-12">
+        <div className="mailstudio-card px-6 py-14 text-center">
           {selectedCategory === 'all' ? (
             <>
-              <Title level={4} type="secondary">
-                {t`No templates found`}
-              </Title>
-              <Paragraph type="secondary">{t`Create your first template to get started`}</Paragraph>
-              <div className="mt-4">
-                {workspace && (
-                  <Tooltip
-                    title={
-                      !permissions?.templates?.write
-                        ? "You don't have write permission for templates"
-                        : undefined
-                    }
-                  >
-                    <div>
-                      <CreateTemplateDrawer
-                        workspace={workspace}
-                        buttonProps={{
-                          size: 'large',
-                          disabled: !permissions?.templates?.write
-                        }}
-                      />
-                    </div>
-                  </Tooltip>
-                )}
-              </div>
+              <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No mail designs yet`}</h2>
+              <p className="mt-2 mb-6 text-sm text-slate-400">
+                {t`Create your first design to use in broadcasts and automations.`}
+              </p>
+              {workspace && (
+                <Tooltip
+                  title={
+                    !permissions?.templates?.write
+                      ? t`You don't have write permission for templates`
+                      : undefined
+                  }
+                >
+                  <div>
+                    <CreateTemplateDrawer
+                      workspace={workspace}
+                      buttonProps={{
+                        type: 'primary',
+                        size: 'large',
+                        disabled: !permissions?.templates?.write
+                      }}
+                    />
+                  </div>
+                </Tooltip>
+              )}
             </>
           ) : (
             <>
-              <Title level={4} type="secondary">
-                {t`No templates found for category "${selectedCategory}"`}
-              </Title>
-              <Paragraph type="secondary">
-                {t`Try selecting a different category or`}{' '}
+              <h2 className="text-lg font-semibold text-slate-100 m-0">
+                {t`No designs in this category`}
+              </h2>
+              <p className="mt-2 mb-0 text-sm text-slate-400">
+                {t`Try another category or`}{' '}
                 <Button type="link" onClick={() => setSelectedCategory('all')} className="p-0">
-                  {t`reset the filter`}
+                  {t`show all designs`}
                 </Button>
                 .
-              </Paragraph>
+              </p>
             </>
           )}
         </div>

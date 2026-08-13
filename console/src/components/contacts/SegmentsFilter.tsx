@@ -224,9 +224,11 @@ export function SegmentsFilter({
   })
 
   return (
-    <div className="flex items-center gap-2 mb-6">
-      <div className="text-sm font-medium">{t`Segments`}:</div>
-      <Space wrap>
+    <div className="flex items-start gap-3 flex-wrap">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 pt-1.5 shrink-0">
+        {t`Segments`}
+      </div>
+      <Space wrap className="flex-1 min-w-0">
         {segments.map((segment: Segment) => {
           const isSelected = selectedSegmentIds.includes(segment.id)
 

@@ -31,8 +31,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ImportContactsToListButton } from '../components/lists/ImportContactsToListButton'
 import { ListStats } from '../components/lists/ListStats'
 import { useLingui } from '@lingui/react/macro'
+import numbro from 'numbro'
 
-const { Title, Paragraph, Text } = Typography
+const { Text } = Typography
 
 // Component to fetch template data and render the preview popover
 const TemplatePreviewButton = ({
@@ -144,25 +145,40 @@ export function ListsPage() {
   }
 
   const hasLists = !isLoading && data?.lists && data.lists.length > 0
+  const listCount = data?.lists?.length ?? 0
 
   if (!workspace) {
     return <div>{t`Loading...`}</div>
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-2xl font-medium">{t`Lists`}</div>
-        {(isLoading || hasLists) && (
-          <Space>
+    <div className="p-6 space-y-4">
+      {/* Recipient lists header strip */}
+      <div className="mailstudio-card px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+                {t`Recipient lists`}
+              </h1>
+              {!isLoading && (
+                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                  {numbro(listCount).format({ thousandSeparated: true, mantissa: 0 })}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 mb-0 text-sm text-slate-400">
+              {t`Reusable groups for broadcasts and imports`}
+            </p>
+          </div>
+          <Space wrap size="middle">
             <Tooltip title={t`Refresh`}>
               <Button
-                type="text"
-                size="small"
                 icon={<FontAwesomeIcon icon={faRefresh} />}
                 onClick={handleRefresh}
-                className="opacity-70 hover:opacity-100"
-              />
+              >
+                {t`Refresh`}
+              </Button>
             </Tooltip>
             <Tooltip
               title={
@@ -173,139 +189,171 @@ export function ListsPage() {
                 <CreateListDrawer
                   workspaceId={workspaceId}
                   buttonProps={{
-                    disabled: !permissions?.lists?.write
+                    type: 'primary',
+                    disabled: !permissions?.lists?.write,
+                    buttonContent: t`Create list`
                   }}
                 />
               </div>
             </Tooltip>
           </Space>
-        )}
+        </div>
       </div>
 
       {isLoading ? (
         <Row gutter={[16, 16]}>
           {[1, 2, 3].map((key) => (
-            <Col xs={24} sm={12} lg={8} key={key}>
-              <Card loading variant="outlined" />
+            <Col xs={24} key={key}>
+              <div className="mailstudio-card overflow-hidden">
+                <Card loading variant="borderless" styles={{ body: { background: 'transparent' } }} />
+              </div>
             </Col>
           ))}
         </Row>
       ) : hasLists ? (
-        <Space direction="vertical" size="large">
+        <div className="flex flex-col gap-4">
           {data.lists.map((list: List) => (
-            <Card
-              title={
-                <div className="flex items-center justify-between">
-                  <Text strong>{list.name}</Text>
-                </div>
-              }
-              extra={
-                <Space>
-                  <Tooltip
-                    title={
-                      !permissions?.lists?.write
-                        ? t`You don't have write permission for lists`
-                        : t`Delete List`
-                    }
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      onClick={() => openDeleteModal(list)}
-                      disabled={!permissions?.lists?.write}
+            <div key={list.id} className="mailstudio-card overflow-hidden">
+              <Card
+                variant="borderless"
+                styles={{
+                  header: {
+                    background: 'transparent',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    padding: '12px 16px'
+                  },
+                  body: {
+                    background: 'transparent',
+                    padding: '16px'
+                  }
+                }}
+                title={
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Text strong className="!text-slate-100 truncate">
+                      {list.name}
+                    </Text>
+                    {list.is_public ? (
+                      <Tag bordered={false} color="green" className="!m-0">
+                        {t`Public`}
+                      </Tag>
+                    ) : (
+                      <Tag bordered={false} color="default" className="!m-0">
+                        {t`Private`}
+                      </Tag>
+                    )}
+                  </div>
+                }
+                extra={
+                  <Space>
+                    <Tooltip
+                      title={
+                        !permissions?.lists?.write
+                          ? t`You don't have write permission for lists`
+                          : t`Delete List`
+                      }
                     >
-                      <FontAwesomeIcon icon={faTrashCan} style={{ opacity: 0.7 }} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip
-                    title={
-                      !permissions?.lists?.write
-                        ? t`You don't have write permission for lists`
-                        : t`Edit List`
-                    }
-                  >
-                    <div>
-                      <CreateListDrawer
-                        workspaceId={workspaceId}
-                        list={list}
-                        buttonProps={{
-                          type: 'text',
-                          size: 'small',
-                          buttonContent: (
-                            <FontAwesomeIcon icon={faPenToSquare} style={{ opacity: 0.7 }} />
-                          ),
-                          disabled: !permissions?.lists?.write
-                        }}
-                      />
-                    </div>
-                  </Tooltip>
-                  <Tooltip
-                    title={
-                      !permissions?.lists?.write
-                        ? t`You don't have write permission for lists`
-                        : undefined
-                    }
-                  >
-                    <div>
-                      <ImportContactsToListButton
-                        list={list}
-                        workspaceId={workspaceId}
-                        lists={data.lists}
+                      <Button
+                        type="text"
+                        size="small"
+                        onClick={() => openDeleteModal(list)}
                         disabled={!permissions?.lists?.write}
-                      />
-                    </div>
-                  </Tooltip>
-                </Space>
-              }
-              key={list.id}
-            >
-              <ListStats workspaceId={workspaceId} listId={list.id} />
+                        className="text-slate-400 hover:text-red-400"
+                      >
+                        <FontAwesomeIcon icon={faTrashCan} style={{ opacity: 0.85 }} />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip
+                      title={
+                        !permissions?.lists?.write
+                          ? t`You don't have write permission for lists`
+                          : t`Edit List`
+                      }
+                    >
+                      <div>
+                        <CreateListDrawer
+                          workspaceId={workspaceId}
+                          list={list}
+                          buttonProps={{
+                            type: 'text',
+                            size: 'small',
+                            buttonContent: (
+                              <FontAwesomeIcon icon={faPenToSquare} style={{ opacity: 0.85 }} />
+                            ),
+                            disabled: !permissions?.lists?.write
+                          }}
+                        />
+                      </div>
+                    </Tooltip>
+                    <Tooltip
+                      title={
+                        !permissions?.lists?.write
+                          ? t`You don't have write permission for lists`
+                          : undefined
+                      }
+                    >
+                      <div>
+                        <ImportContactsToListButton
+                          list={list}
+                          workspaceId={workspaceId}
+                          lists={data.lists}
+                          disabled={!permissions?.lists?.write}
+                        />
+                      </div>
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <ListStats workspaceId={workspaceId} listId={list.id} />
 
-              <Divider />
+                <Divider className="!border-white/10 !my-4" />
 
-              <Descriptions size="small" column={2}>
-                <Descriptions.Item label={t`ID`}>{list.id}</Descriptions.Item>
+                <Descriptions
+                  size="small"
+                  column={{ xs: 1, sm: 2 }}
+                  className="mailstudio-list-meta"
+                  labelStyle={{ color: '#94a3b8' }}
+                  contentStyle={{ color: '#e2e8f0' }}
+                >
+                  <Descriptions.Item label={t`ID`}>{list.id}</Descriptions.Item>
 
-                <Descriptions.Item label={t`Description`}>{list.description}</Descriptions.Item>
-                <Descriptions.Item label={t`Visibility`}>
-                  {list.is_public ? (
-                    <Tag bordered={false} color="green">
-                      {t`Public`}
-                    </Tag>
-                  ) : (
-                    <Tag bordered={false} color="volcano">
-                      {t`Private`}
-                    </Tag>
-                  )}
-                </Descriptions.Item>
+                  <Descriptions.Item label={t`Description`}>
+                    {list.description || <span className="text-slate-500">—</span>}
+                  </Descriptions.Item>
 
-                {/* Double Opt-in Template */}
-                <Descriptions.Item label={t`Double Opt-in Template`}>
-                  {list.double_optin_template ? (
-                    <Space>
-                      <Check size={16} className="text-green-500 mt-1" />
-                      <TemplatePreviewButton
-                        templateRef={list.double_optin_template}
-                        workspace={workspace}
-                      />
-                    </Space>
-                  ) : (
-                    <X size={16} className="text-slate-500 mt-1" />
-                  )}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
+                  {/* Double Opt-in Template */}
+                  <Descriptions.Item label={t`Double Opt-in Template`}>
+                    {list.double_optin_template ? (
+                      <Space>
+                        <Check size={16} className="text-green-500 mt-1" />
+                        <TemplatePreviewButton
+                          templateRef={list.double_optin_template}
+                          workspace={workspace}
+                        />
+                      </Space>
+                    ) : (
+                      <X size={16} className="text-slate-500 mt-1" />
+                    )}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+            </div>
           ))}
-        </Space>
+        </div>
       ) : (
-        <div className="text-center py-12">
-          <Title level={4} type="secondary">
-            {t`No lists found`}
-          </Title>
-          <Paragraph type="secondary">{t`Create your first list to get started`}</Paragraph>
-          <div className="mt-4">
-            <CreateListDrawer workspaceId={workspaceId} buttonProps={{ size: 'large' }} />
-          </div>
+        <div className="mailstudio-card px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No recipient lists yet`}</h2>
+          <p className="mt-2 mb-6 text-sm text-slate-400">
+            {t`Create a list to group people for broadcasts and imports.`}
+          </p>
+          <CreateListDrawer
+            workspaceId={workspaceId}
+            buttonProps={{
+              type: 'primary',
+              size: 'large',
+              buttonContent: t`Create list`,
+              disabled: !permissions?.lists?.write
+            }}
+          />
         </div>
       )}
 

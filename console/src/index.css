@@ -164,6 +164,30 @@ th.ant-table-cell.contacts-fixed-col,
   border-left-color: #ff4d4f !important;
 }
 
+/* Thin dark scrollbars (Firefox + Chromium) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.55);
+}
+
 /* Required mark inscreses the line height of the form item creating discrepancy when using 2 columns */
 :where(.css-dev-only-do-not-override-1d0rgb4).ant-form-item .ant-form-item-label > label.ant-form-item-required::before {
   font-family: inherit;

@@ -5,9 +5,7 @@ import { useLingui } from '@lingui/react/macro'
 import md5 from 'blueimp-md5'
 import {
   faImage,
-  faPaperPlane,
-  faFileLines,
-  faQuestionCircle
+  faPaperPlane
 } from '@fortawesome/free-regular-svg-icons'
 import {
   faPlus,
@@ -30,7 +28,6 @@ import {
   FolderOpenOutlined,
   LineChartOutlined,
   SettingOutlined,
-  WarningOutlined,
   DownOutlined
 } from '@ant-design/icons'
 
@@ -604,38 +601,6 @@ export function WorkspaceLayout() {
             </div>
 
             <Space size={isMobile ? 'small' : 'middle'}>
-              <Dropdown
-                trigger={['click']}
-                menu={{
-                  items: [
-                    {
-                      key: 'docs',
-                      label: (
-                        <a href="#" onClick={(e) => e.preventDefault()} className="flex items-center gap-2">
-                          <FontAwesomeIcon icon={faFileLines} /> {t`Documentation`}
-                        </a>
-                      )
-                    },
-                    {
-                      key: 'report-issue',
-                      label: (
-                        <a href="#" onClick={(e) => e.preventDefault()} className="flex items-center gap-2">
-                          <WarningOutlined />
-                          {t`Report An Issue`}
-                        </a>
-                      )
-                    }
-                  ]
-                }}
-                placement="bottomRight"
-              >
-                <Button
-                  className="bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700 text-xs px-2.5 sm:px-3"
-                  icon={<FontAwesomeIcon icon={faQuestionCircle} />}
-                >
-                  {!isMobile && t`Help`}
-                </Button>
-              </Dropdown>
               <LanguageSwitcher />
               <Dropdown
                 menu={{

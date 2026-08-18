@@ -7,6 +7,12 @@ import { setupApi } from '../services/api/setup'
 import type { SetupConfig } from '../types/setup'
 import { getBrowserTimezone } from '../lib/timezoneNormalizer'
 import { useLingui } from '@lingui/react/macro'
+import { MainLayout } from '../layouts/MainLayout'
+
+const setupCardClass =
+  'w-full max-w-3xl p-8 rounded-2xl bg-slate-900/80 backdrop-blur-2xl border border-slate-800/90 shadow-2xl shadow-indigo-950/40'
+const setupLabelClass = 'text-slate-300 font-medium text-xs'
+const setupLinkClass = 'text-indigo-400 hover:text-indigo-300 hover:underline'
 
 export default function SetupWizard() {
   const { t } = useLingui()
@@ -268,34 +274,34 @@ export default function SetupWizard() {
   if (statusLoading) {
     return (
       <App>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-            <p className="mt-4 text-gray-600">{t`Loading setup...`}</p>
+        <MainLayout>
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400" />
+              <p className="mt-4 text-slate-400">{t`Loading setup...`}</p>
+            </div>
           </div>
-        </div>
+        </MainLayout>
       </App>
     )
   }
 
   return (
     <App>
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <img src="/console/logo.png" alt="Mail Studio" className="mx-auto" width={120} />
-          </div>
-
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] py-10">
+          <div className={setupCardClass}>
             {setupComplete ? (
               <div className="space-y-6">
                 <div className="text-center">
+                  <div className="text-2xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] mb-4">
+                    Mail Studio<span className="text-indigo-500">.</span>
+                  </div>
                   <CheckOutlined
-                    style={{ fontSize: '48px', color: '#52c41a', marginBottom: '16px' }}
+                    style={{ fontSize: '48px', color: '#34d399', marginBottom: '16px' }}
                   />
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">{t`Setup Complete!`}</h2>
-                  <p className="text-gray-600">
+                  <h2 className="text-3xl font-bold text-white mb-2">{t`Setup Complete!`}</h2>
+                  <p className="text-slate-400">
                     {t`Your Mail Studio instance has been successfully configured.`}
                   </p>
                 </div>
@@ -318,7 +324,10 @@ export default function SetupWizard() {
             ) : (
               <div className="space-y-6">
                 <div className="text-center">
-                  <h2 className="text-3xl font-bold text-gray-900">{t`Setup`}</h2>
+                  <div className="text-2xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] mb-2">
+                    Mail Studio<span className="text-indigo-500">.</span>
+                  </div>
+                  <h2 className="text-sm font-semibold text-slate-200 tracking-tight">{t`Setup`}</h2>
                 </div>
 
                 <Form
@@ -339,7 +348,7 @@ export default function SetupWizard() {
                     <div className="mt-12">
                       {!configStatus.root_email_configured && (
                         <Form.Item
-                          label={t`Root Email`}
+                          label={<span className={setupLabelClass}>{t`Root Email`}</span>}
                           name="root_email"
                           rules={[
                             { required: true, message: t`Admin email is required` },
@@ -352,7 +361,7 @@ export default function SetupWizard() {
                       )}
                       {!configStatus.api_endpoint_configured && (
                         <Form.Item
-                          label={t`API Endpoint`}
+                          label={<span className={setupLabelClass}>{t`API Endpoint`}</span>}
                           name="api_endpoint"
                           rules={[
                             { required: true, message: t`API endpoint is required` },
@@ -370,7 +379,11 @@ export default function SetupWizard() {
                   <Form.Item
                     name="subscribe_newsletter"
                     valuePropName="checked"
-                    label={t`Subscribe to the newsletter (new features...)`}
+                    label={
+                      <span className={setupLabelClass}>
+                        {t`Subscribe to the newsletter (new features...)`}
+                      </span>
+                    }
                     style={{ marginTop: 24 }}
                   >
                     <Switch />
@@ -384,13 +397,13 @@ export default function SetupWizard() {
                       </Divider>
 
                       <div className="text-center mb-4">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-400">
                           {t`See docs for:`}
                           <a
                             href="https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline pl-2"
+                            className={`${setupLinkClass} pl-2`}
                           >
                             Amazon SES
                           </a>
@@ -399,7 +412,7 @@ export default function SetupWizard() {
                             href="https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages/send-smtp"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className={setupLinkClass}
                           >
                             Mailgun
                           </a>
@@ -408,7 +421,7 @@ export default function SetupWizard() {
                             href="https://developers.sparkpost.com/api/smtp/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className={setupLinkClass}
                           >
                             SparkPost
                           </a>
@@ -417,7 +430,7 @@ export default function SetupWizard() {
                             href="https://postmarkapp.com/developer/user-guide/send-email-with-smtp"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className={setupLinkClass}
                           >
                             Postmark
                           </a>
@@ -427,7 +440,7 @@ export default function SetupWizard() {
                       <Row gutter={16}>
                         <Col span={10}>
                           <Form.Item
-                            label={t`SMTP Host`}
+                            label={<span className={setupLabelClass}>{t`SMTP Host`}</span>}
                             name="smtp_host"
                             rules={[{ required: true, message: t`SMTP host is required` }]}
                           >
@@ -436,7 +449,7 @@ export default function SetupWizard() {
                         </Col>
                         <Col span={8}>
                           <Form.Item
-                            label={t`SMTP Port`}
+                            label={<span className={setupLabelClass}>{t`SMTP Port`}</span>}
                             name="smtp_port"
                             rules={[{ required: true, message: t`SMTP port is required` }]}
                             tooltip={t`Common ports: 587 (TLS), 465 (SSL), 25 (unencrypted)`}
@@ -453,7 +466,7 @@ export default function SetupWizard() {
                           <Form.Item
                             name="smtp_use_tls"
                             valuePropName="checked"
-                            label={t`Use TLS`}
+                            label={<span className={setupLabelClass}>{t`Use TLS`}</span>}
                             tooltip={t`Enable TLS encryption for SMTP connection`}
                           >
                             <Switch defaultChecked />
@@ -463,12 +476,18 @@ export default function SetupWizard() {
 
                       <Row gutter={16}>
                         <Col span={12}>
-                          <Form.Item label={t`SMTP Username`} name="smtp_username">
+                          <Form.Item
+                            label={<span className={setupLabelClass}>{t`SMTP Username`}</span>}
+                            name="smtp_username"
+                          >
                             <Input placeholder="user@example.com" />
                           </Form.Item>
                         </Col>
                         <Col span={12}>
-                          <Form.Item label={t`SMTP Password`} name="smtp_password">
+                          <Form.Item
+                            label={<span className={setupLabelClass}>{t`SMTP Password`}</span>}
+                            name="smtp_password"
+                          >
                             <Input.Password placeholder="••••••••" />
                           </Form.Item>
                         </Col>
@@ -477,7 +496,7 @@ export default function SetupWizard() {
                       <Row gutter={16}>
                         <Col span={12}>
                           <Form.Item
-                            label={t`From Email`}
+                            label={<span className={setupLabelClass}>{t`From Email`}</span>}
                             name="smtp_from_email"
                             rules={[
                               { required: true, message: t`From email is required` },
@@ -488,7 +507,10 @@ export default function SetupWizard() {
                           </Form.Item>
                         </Col>
                         <Col span={12}>
-                          <Form.Item label={t`From Name`} name="smtp_from_name">
+                          <Form.Item
+                            label={<span className={setupLabelClass}>{t`From Name`}</span>}
+                            name="smtp_from_name"
+                          >
                             <Input placeholder="Mail Studio" />
                           </Form.Item>
                         </Col>
@@ -496,7 +518,7 @@ export default function SetupWizard() {
 
                       <Form.Item
                         name="smtp_ehlo_hostname"
-                        label={t`EHLO Hostname`}
+                        label={<span className={setupLabelClass}>{t`EHLO Hostname`}</span>}
                         tooltip={t`The hostname your server identifies itself as when connecting to the SMTP server. Defaults to the SMTP host value if empty.`}
                       >
                         <Input placeholder={t`Defaults to SMTP host`} />
@@ -521,7 +543,9 @@ export default function SetupWizard() {
                     items={[
                       {
                         key: 'advanced',
-                        label: t`Advanced Settings`,
+                        label: (
+                          <span className="text-slate-300 font-medium">{t`Advanced Settings`}</span>
+                        ),
                         children: (
                           <>
                             <Row gutter={16}>
@@ -529,7 +553,11 @@ export default function SetupWizard() {
                                 <Form.Item
                                   name="telemetry_enabled"
                                   valuePropName="checked"
-                                  label={t`Enable Anonymous Telemetry`}
+                                  label={
+                                    <span className={setupLabelClass}>
+                                      {t`Enable Anonymous Telemetry`}
+                                    </span>
+                                  }
                                   tooltip={t`Help us improve Mail Studio by sending anonymous usage statistics. No personal data or message content is collected.`}
                                 >
                                   <Switch />
@@ -539,7 +567,9 @@ export default function SetupWizard() {
                                 <Form.Item
                                   name="check_for_updates"
                                   valuePropName="checked"
-                                  label={t`Check for Updates`}
+                                  label={
+                                    <span className={setupLabelClass}>{t`Check for Updates`}</span>
+                                  }
                                   tooltip={t`Periodically check for new Mail Studio versions and security updates. A popup will list new versions available.`}
                                 >
                                   <Switch />
@@ -555,7 +585,11 @@ export default function SetupWizard() {
                                 <Form.Item
                                   name="smtp_bridge_enabled"
                                   valuePropName="checked"
-                                  label={t`Enable SMTP Bridge Server`}
+                                  label={
+                                    <span className={setupLabelClass}>
+                                      {t`Enable SMTP Bridge Server`}
+                                    </span>
+                                  }
                                   tooltip={t`Allow receiving emails to trigger transactional notifications. Requires TLS certificates.`}
                                 >
                                   <Switch />
@@ -578,7 +612,7 @@ export default function SetupWizard() {
                                         }}
                                       >
                                         <Form.Item
-                                          label={t`Domain`}
+                                          label={<span className={setupLabelClass}>{t`Domain`}</span>}
                                           name="smtp_bridge_domain"
                                           rules={[
                                             {
@@ -592,7 +626,7 @@ export default function SetupWizard() {
                                         </Form.Item>
 
                                         <Form.Item
-                                          label={t`Port`}
+                                          label={<span className={setupLabelClass}>{t`Port`}</span>}
                                           name="smtp_bridge_port"
                                           initialValue={587}
                                           rules={[
@@ -611,7 +645,11 @@ export default function SetupWizard() {
                                         </Form.Item>
 
                                         <Form.Item
-                                          label={t`TLS Certificate (Base64)`}
+                                          label={
+                                            <span className={setupLabelClass}>
+                                              {t`TLS Certificate (Base64)`}
+                                            </span>
+                                          }
                                           name="smtp_bridge_tls_cert_base64"
                                           rules={[
                                             {
@@ -629,7 +667,11 @@ export default function SetupWizard() {
                                         </Form.Item>
 
                                         <Form.Item
-                                          label={t`TLS Private Key (Base64)`}
+                                          label={
+                                            <span className={setupLabelClass}>
+                                              {t`TLS Private Key (Base64)`}
+                                            </span>
+                                          }
                                           name="smtp_bridge_tls_key_base64"
                                           rules={[
                                             {
@@ -676,7 +718,7 @@ export default function SetupWizard() {
             )}
           </div>
         </div>
-      </div>
+      </MainLayout>
     </App>
   )
 }

@@ -29,5 +29,4 @@ console/.claude/settings.local.json
 service.test
 
 integration.test
-config.bat
 .env

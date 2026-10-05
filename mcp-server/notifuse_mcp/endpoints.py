@@ -225,6 +225,14 @@ ENDPOINTS: list[Endpoint] = [
                  P("provider", "object"), P("supabase_settings", "object"),
                  P("llm_provider", "object"), P("firecrawl_settings", "object"),
              ]),
+    Endpoint("workspaces_update_email_senders", "POST", "/api/workspaces.updateIntegration",
+             "Replace the From addresses on an email integration. Does not change SES or SMTP keys.",
+             tag="workspaces", body=[
+                 WID, P("integration_id", required=True),
+                 P("name", required=True, desc="Current integration name. Required by the API."),
+                 P("provider", "object", required=True,
+                   desc="Only senders: {\"senders\":[{\"email\",\"name\",\"is_default\"}]}. Do not include SES or SMTP secrets."),
+             ]),
     Endpoint("workspaces_delete_integration", "POST", "/api/workspaces.deleteIntegration",
              "Delete a workspace integration.", tag="workspaces", body=[
                  WID, P("integration_id", required=True),

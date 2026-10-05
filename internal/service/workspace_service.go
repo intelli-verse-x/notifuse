@@ -1454,6 +1454,12 @@ func (s *WorkspaceService) UpdateIntegration(ctx context.Context, req domain.Upd
 	// Update type-specific settings
 	switch existingIntegration.Type {
 	case domain.IntegrationTypeEmail:
+		// A sender-only update leaves SES and SMTP keys on the existing provider.
+		if req.Provider.Kind == "" && len(req.Provider.Senders) > 0 {
+			updatedIntegration.EmailProvider = existingIntegration.EmailProvider
+			updatedIntegration.EmailProvider.Senders = req.Provider.Senders
+			break
+		}
 		updatedIntegration.EmailProvider = req.Provider
 	case domain.IntegrationTypeSupabase:
 		// Preserve existing encrypted keys if new keys are not provided

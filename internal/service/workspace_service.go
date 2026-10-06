@@ -317,8 +317,11 @@ func (s *WorkspaceService) UpdateWorkspace(ctx context.Context, id string, name 
 	}
 
 	if userWorkspace.Role != "owner" {
-		s.logger.WithField("workspace_id", id).WithField("user_id", user.ID).WithField("role", userWorkspace.Role).Error("User is not an owner of the workspace")
-		return nil, &domain.ErrUnauthorized{Message: "user is not an owner of the workspace"}
+		if !userWorkspace.CanManageEmailSenders() {
+			s.logger.WithField("workspace_id", id).WithField("user_id", user.ID).WithField("role", userWorkspace.Role).Error("User is not an owner of the workspace")
+			return nil, &domain.ErrUnauthorized{Message: "user is not an owner of the workspace"}
+		}
+		return s.assignEmailProviders(ctx, id, settings)
 	}
 
 	// Get the existing workspace to preserve integrations and other fields
@@ -422,6 +425,48 @@ func (s *WorkspaceService) UpdateWorkspace(ctx context.Context, id string, name 
 	// No automatic theme creation in the backend
 
 	return existingWorkspace, nil
+}
+
+// assignEmailProviders lets a Full Access member choose which email
+// integration sends marketing and transactional mail. Name, secrets, and
+// other settings stay owner-only.
+func (s *WorkspaceService) assignEmailProviders(ctx context.Context, id string, settings domain.WorkspaceSettings) (*domain.Workspace, error) {
+	existingWorkspace, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		s.logger.WithField("workspace_id", id).WithField("error", err.Error()).Error("Failed to get existing workspace")
+		return nil, err
+	}
+	if err := requireEmailIntegration(existingWorkspace, settings.TransactionalEmailProviderID); err != nil {
+		return nil, err
+	}
+	if err := requireEmailIntegration(existingWorkspace, settings.MarketingEmailProviderID); err != nil {
+		return nil, err
+	}
+	existingWorkspace.Settings.TransactionalEmailProviderID = settings.TransactionalEmailProviderID
+	existingWorkspace.Settings.MarketingEmailProviderID = settings.MarketingEmailProviderID
+	existingWorkspace.UpdatedAt = time.Now().UTC()
+	if err := existingWorkspace.Validate(s.secretKey); err != nil {
+		s.logger.WithField("workspace_id", id).WithField("error", err.Error()).Error("Failed to validate workspace")
+		return nil, err
+	}
+	if err := s.repo.Update(ctx, existingWorkspace); err != nil {
+		s.logger.WithField("workspace_id", id).WithField("error", err.Error()).Error("Failed to update workspace")
+		return nil, err
+	}
+	return existingWorkspace, nil
+}
+
+func requireEmailIntegration(workspace *domain.Workspace, id string) error {
+	if id == "" {
+		return nil
+	}
+	for i := range workspace.Integrations {
+		integration := &workspace.Integrations[i]
+		if integration.ID == id && integration.Type == IntegrationTypeEmail {
+			return nil
+		}
+	}
+	return fmt.Errorf("email integration %s was not found", id)
 }
 
 // DeleteWorkspace deletes a workspace if the user is an owner

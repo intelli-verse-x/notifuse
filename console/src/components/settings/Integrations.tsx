@@ -381,7 +381,7 @@ const EmailIntegration = ({
                 {t`Not assigned`}
               </Tag>
             )}
-            {isOwner && (
+            {(isOwner || canManageSenders) && (
               <>
                 {!purposes.includes('Marketing Emails') &&
                   !transactionalEmailOnly.includes(provider.kind) && (

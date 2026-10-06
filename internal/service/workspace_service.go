@@ -462,7 +462,7 @@ func requireEmailIntegration(workspace *domain.Workspace, id string) error {
 	}
 	for i := range workspace.Integrations {
 		integration := &workspace.Integrations[i]
-		if integration.ID == id && integration.Type == IntegrationTypeEmail {
+		if integration.ID == id && integration.Type == domain.IntegrationTypeEmail {
 			return nil
 		}
 	}

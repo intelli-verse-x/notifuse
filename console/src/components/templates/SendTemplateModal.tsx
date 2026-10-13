@@ -172,10 +172,10 @@ export default function SendTemplateModal({
   // Handle file upload
   const handleFileUpload = async (file: File) => {
     try {
-      // Check file size (3MB limit per file)
-      const maxSize = 3 * 1024 * 1024
+      // Check file size (10MB limit per file)
+      const maxSize = 10 * 1024 * 1024
       if (file.size > maxSize) {
-        message.error(t`File ${file.name} exceeds 3MB limit`)
+        message.error(t`File ${file.name} exceeds 10MB limit`)
         return false
       }
 
@@ -391,7 +391,7 @@ export default function SendTemplateModal({
                   </Button>
                 </Upload>
                 <Text type="secondary" className="text-xs mt-1 block">
-                  {t`Max 3MB per file, 10MB total, 20 files maximum`}
+                  {t`Max 10MB per file, 10MB total, 20 files maximum`}
                 </Text>
                 {attachments.length > 0 && (
                   <Space direction="vertical" className="mt-2 w-full">

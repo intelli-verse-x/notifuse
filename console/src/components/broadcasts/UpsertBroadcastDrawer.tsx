@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Button,
   Drawer,
@@ -33,6 +33,27 @@ import extractTLD from '../../lib/tld'
 import type { List } from '../../services/api/list'
 import { DataFeedSettings } from './DataFeedSettings'
 import type { GlobalFeedSettings, RecipientFeedSettings } from '../../services/api/broadcast'
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const value = reader.result
+      if (typeof value !== 'string') {
+        reject(new Error('Failed to read the PDF'))
+        return
+      }
+      const encoded = value.split(',')[1]
+      if (!encoded) {
+        reject(new Error('Failed to read the PDF'))
+        return
+      }
+      resolve(encoded)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read the PDF'))
+    reader.readAsDataURL(file)
+  })
+}
 
 // Custom component to handle A/B testing configuration
 const ABTestingConfig = ({ form }: { form: ReturnType<typeof Form.useForm>[0] }) => {
@@ -107,6 +128,15 @@ export function UpsertBroadcastDrawer({
     url: '',
     headers: []
   })
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [removeAttachment, setRemoveAttachment] = useState(false)
+  const attachmentFileRef = useRef<File | null>(null)
+  const removeAttachmentRef = useRef(false)
+  attachmentFileRef.current = attachmentFile
+  removeAttachmentRef.current = removeAttachment
+  const attachmentsLocked =
+    !!broadcast &&
+    ['processing', 'testing', 'winner_selected'].includes(broadcast.status)
 
   // Watch campaign name changes using Form.useWatch
   const campaignName = Form.useWatch('name', form)
@@ -135,7 +165,7 @@ export function UpsertBroadcastDrawer({
   }, [campaignName, form, isOpen])
 
   const upsertBroadcastMutation = useMutation({
-    mutationFn: (values: CreateBroadcastRequest | UpdateBroadcastRequest) => {
+    mutationFn: async (values: CreateBroadcastRequest | UpdateBroadcastRequest) => {
       // Clone the values to avoid modifying the original
       const payload = { ...values }
 
@@ -145,14 +175,35 @@ export function UpsertBroadcastDrawer({
         use_recipient_timezone: false
       }
 
-      // For logging or debugging
-      // console.log('Submitting broadcast:', payload);
+      const saved = broadcast
+        ? await broadcastApi.update(payload as UpdateBroadcastRequest)
+        : await broadcastApi.create(payload as CreateBroadcastRequest)
 
-      if (broadcast) {
-        return broadcastApi.update(payload as UpdateBroadcastRequest)
-      } else {
-        return broadcastApi.create(payload as CreateBroadcastRequest)
+      const file = attachmentFileRef.current
+      const remove = removeAttachmentRef.current
+      if (file || remove) {
+        try {
+          await broadcastApi.setAttachments({
+            workspace_id: workspace.id,
+            id: saved.broadcast.id,
+            attachments: file
+              ? [
+                  {
+                    filename: file.name,
+                    content: await fileToBase64(file),
+                    content_type: 'application/pdf',
+                    disposition: 'attachment'
+                  }
+                ]
+              : []
+          })
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : 'unknown error'
+          throw new Error(`Broadcast was saved, but the PDF was not attached: ${reason}`)
+        }
       }
+
+      return saved
     },
     onSuccess: () => {
       message.success(broadcast ? t`Broadcast updated successfully` : t`Broadcast created successfully`)
@@ -236,6 +287,8 @@ export function UpsertBroadcastDrawer({
         headers: []
       })
     }
+    setAttachmentFile(null)
+    setRemoveAttachment(false)
     setFormTouched(false)
     setTab('audience')
     setIsOpen(true)
@@ -651,6 +704,72 @@ export function UpsertBroadcastDrawer({
 
                 <div style={{ display: tab === 'content' ? 'block' : 'none' }}>
                   <div className="pt-8 pr-8">
+                    <div className="mb-6">
+                      <div className="mb-1 font-medium">{t`PDF attachment`}</div>
+                      <p className="text-xs text-gray-500 mb-2">
+                        {t`The same PDF is attached to every email in this broadcast, including scheduled sends. Maximum 10MB.`}
+                      </p>
+                      {attachmentsLocked && (
+                        <Alert
+                          type="info"
+                          className="!mb-2"
+                          description={t`Attachments cannot be changed while this broadcast is sending.`}
+                        />
+                      )}
+                      {broadcast?.attachments &&
+                        broadcast.attachments.length > 0 &&
+                        !removeAttachment &&
+                        !attachmentFile && (
+                          <div className="mb-2">
+                            {broadcast.attachments.map((att) => (
+                              <Tag key={att.checksum || att.filename}>{att.filename}</Tag>
+                            ))}
+                            <Button
+                              type="link"
+                              danger
+                              disabled={attachmentsLocked}
+                              onClick={() => {
+                                setRemoveAttachment(true)
+                                setFormTouched(true)
+                              }}
+                            >
+                              {t`Remove`}
+                            </Button>
+                          </div>
+                        )}
+                      {removeAttachment && !attachmentFile && (
+                        <div className="mb-2 text-xs text-gray-500">{t`The PDF will be removed when you save.`}</div>
+                      )}
+                      {attachmentFile && (
+                        <div className="mb-2 text-xs">{attachmentFile.name}</div>
+                      )}
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        disabled={attachmentsLocked}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null
+                          event.target.value = ''
+                          if (!file) {
+                            return
+                          }
+                          const isPdf =
+                            file.type === 'application/pdf' ||
+                            file.name.toLowerCase().endsWith('.pdf')
+                          if (!isPdf) {
+                            message.error(t`Only a PDF can be attached`)
+                            return
+                          }
+                          if (file.size > 10 * 1024 * 1024) {
+                            message.error(t`PDF must be 10MB or smaller`)
+                            return
+                          }
+                          setAttachmentFile(file)
+                          setRemoveAttachment(false)
+                          setFormTouched(true)
+                        }}
+                      />
+                    </div>
                     {!workspace.settings?.email_tracking_enabled && (
                       <Alert
                         description={t`Tracking (opens & clicks) must be enabled in workspace settings to use A/B testing features.`}

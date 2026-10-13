@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/Notifuse/notifuse/internal/domain"
@@ -104,6 +105,30 @@ func (s *AttachmentService) GetAttachmentsForMessage(ctx context.Context, worksp
 	}
 
 	return attachments, nil
+}
+
+// Hydrate loads stored bytes and returns provider-ready attachments.
+// The same checksum is shared by every recipient, so the file is read per send
+// and is not copied into each queued payload.
+func (s *AttachmentService) Hydrate(ctx context.Context, workspaceID string, metadata []domain.AttachmentMetadata) ([]domain.Attachment, error) {
+	if len(metadata) == 0 {
+		return nil, nil
+	}
+
+	result := make([]domain.Attachment, 0, len(metadata))
+	for i, meta := range metadata {
+		record, err := s.attachmentRepo.Get(ctx, workspaceID, meta.Checksum)
+		if err != nil {
+			return nil, fmt.Errorf("attachment %d (%s): %w", i, meta.Filename, err)
+		}
+		result = append(result, domain.Attachment{
+			Filename:    meta.Filename,
+			Content:     base64.StdEncoding.EncodeToString(record.Content),
+			ContentType: meta.ContentType,
+			Disposition: meta.Disposition,
+		})
+	}
+	return result, nil
 }
 
 // RetrieveAttachmentContent retrieves attachment content for sending emails

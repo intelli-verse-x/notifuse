@@ -88,9 +88,10 @@ func (r *broadcastRepository) CreateBroadcastTx(ctx context.Context, tx *sql.Tx,
 			cancelled_at,
 			paused_at,
 			pause_reason,
-			data_feed
+			data_feed,
+			attachments
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
 		)
 	`
 
@@ -116,6 +117,7 @@ func (r *broadcastRepository) CreateBroadcastTx(ctx context.Context, tx *sql.Tx,
 		broadcast.PausedAt,
 		broadcast.PauseReason,
 		broadcast.DataFeed,
+		broadcast.Attachments,
 	)
 
 	if err != nil {
@@ -155,7 +157,8 @@ func (r *broadcastRepository) GetBroadcast(ctx context.Context, workspaceID, id 
 			cancelled_at,
 			paused_at,
 			pause_reason,
-			data_feed
+			data_feed,
+			attachments
 		FROM broadcasts
 		WHERE id = $1 AND workspace_id = $2
 	`
@@ -197,7 +200,8 @@ func (r *broadcastRepository) GetBroadcastTx(ctx context.Context, tx *sql.Tx, wo
 			cancelled_at,
 			paused_at,
 			pause_reason,
-			data_feed
+			data_feed,
+			attachments
 		FROM broadcasts
 		WHERE id = $1 AND workspace_id = $2
 	`
@@ -246,7 +250,8 @@ func (r *broadcastRepository) UpdateBroadcastTx(ctx context.Context, tx *sql.Tx,
 			paused_at = $17,
 			pause_reason = $18,
 			enqueued_count = $19,
-			data_feed = $20
+			data_feed = $20,
+			attachments = $21
 		WHERE id = $1 AND workspace_id = $2
 			AND status != 'cancelled'
 			AND status != 'processed'
@@ -273,6 +278,7 @@ func (r *broadcastRepository) UpdateBroadcastTx(ctx context.Context, tx *sql.Tx,
 		broadcast.PauseReason,
 		broadcast.EnqueuedCount,
 		broadcast.DataFeed,
+		broadcast.Attachments,
 	)
 
 	if err != nil {
@@ -289,6 +295,39 @@ func (r *broadcastRepository) UpdateBroadcastTx(ctx context.Context, tx *sql.Tx,
 	}
 
 	return nil
+}
+
+// UpdateBroadcastAttachments updates only attachment metadata and updated_at.
+func (r *broadcastRepository) UpdateBroadcastAttachments(ctx context.Context, broadcast *domain.Broadcast) error {
+	return r.WithTransaction(ctx, broadcast.WorkspaceID, func(tx *sql.Tx) error {
+		broadcast.UpdatedAt = time.Now().UTC()
+
+		query := `
+			UPDATE broadcasts SET
+				attachments = $3,
+				updated_at = $4
+			WHERE id = $1 AND workspace_id = $2
+		`
+
+		result, err := tx.ExecContext(ctx, query,
+			broadcast.ID,
+			broadcast.WorkspaceID,
+			broadcast.Attachments,
+			broadcast.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update broadcast attachments: %w", err)
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to get rows affected: %w", err)
+		}
+		if rowsAffected == 0 {
+			return &domain.ErrBroadcastNotFound{ID: broadcast.ID}
+		}
+		return nil
+	})
 }
 
 // UpdateBroadcastStatusTx updates only the status-lifecycle fields. Unlike
@@ -391,7 +430,8 @@ func (r *broadcastRepository) ListBroadcastsTx(ctx context.Context, tx *sql.Tx, 
 				cancelled_at,
 				paused_at,
 				pause_reason,
-				data_feed
+				data_feed,
+				attachments
 			FROM broadcasts
 			WHERE workspace_id = $1 AND status = $2
 			ORDER BY created_at DESC
@@ -421,7 +461,8 @@ func (r *broadcastRepository) ListBroadcastsTx(ctx context.Context, tx *sql.Tx, 
 				cancelled_at,
 				paused_at,
 				pause_reason,
-				data_feed
+				data_feed,
+				attachments
 			FROM broadcasts
 			WHERE workspace_id = $1
 			ORDER BY created_at DESC
@@ -546,6 +587,7 @@ func scanBroadcast(scanner interface {
 		&broadcast.PausedAt,
 		&pauseReason,
 		&dataFeed,
+		&broadcast.Attachments,
 	)
 
 	if err != nil {

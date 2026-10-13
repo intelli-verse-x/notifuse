@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -55,6 +56,7 @@ func (h *BroadcastHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/broadcasts.resume", requireAuth(http.HandlerFunc(h.HandleResume)))
 	mux.Handle("/api/broadcasts.cancel", requireAuth(http.HandlerFunc(h.HandleCancel)))
 	mux.Handle("/api/broadcasts.sendToIndividual", requireAuth(http.HandlerFunc(h.HandleSendToIndividual)))
+	mux.Handle("/api/broadcasts.setAttachments", requireAuth(http.HandlerFunc(h.HandleSetAttachments)))
 	mux.Handle("/api/broadcasts.delete", requireAuth(http.HandlerFunc(h.HandleDelete)))
 	// A/B Testing endpoints
 	mux.Handle("/api/broadcasts.getTestResults", requireAuth(http.HandlerFunc(h.HandleGetTestResults)))
@@ -397,6 +399,57 @@ func (h *BroadcastHandler) HandleCancel(w http.ResponseWriter, r *http.Request) 
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
+	})
+}
+
+// maxAttachmentRequestBytes is large enough for a 10MB file after base64
+// (about 13.4MB) plus the JSON envelope, and small enough to reject a huge body.
+const maxAttachmentRequestBytes = 18 << 20
+
+// HandleSetAttachments stores a file once on a broadcast. Every later send of
+// that broadcast attaches the same file.
+func (h *BroadcastHandler) HandleSetAttachments(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxAttachmentRequestBytes)
+
+	var req domain.SetBroadcastAttachmentsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var maxBytes *http.MaxBytesError
+		if errors.As(err, &maxBytes) {
+			WriteJSONError(w, "attachment upload exceeds the 10MB limit", http.StatusRequestEntityTooLarge)
+			return
+		}
+		h.logger.WithField("error", err.Error()).Error("Failed to decode attachment request")
+		WriteJSONError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	broadcast, err := h.service.SetAttachments(r.Context(), &req)
+	if err != nil {
+		if _, ok := err.(*domain.PermissionError); ok {
+			WriteJSONError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		if _, ok := err.(*domain.ErrBroadcastNotFound); ok {
+			WriteJSONError(w, "Broadcast not found", http.StatusNotFound)
+			return
+		}
+		var rejected *domain.ErrBroadcastAttachment
+		if errors.As(err, &rejected) {
+			WriteJSONError(w, rejected.Error(), http.StatusBadRequest)
+			return
+		}
+		h.logger.WithField("error", err.Error()).Error("Failed to set broadcast attachments")
+		WriteJSONError(w, "Failed to set broadcast attachments", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"broadcast": broadcast,
 	})
 }
 

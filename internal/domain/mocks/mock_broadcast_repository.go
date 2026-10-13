@@ -152,6 +152,20 @@ func (mr *MockBroadcastRepositoryMockRecorder) ListBroadcastsTx(arg0, arg1, arg2
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBroadcastsTx", reflect.TypeOf((*MockBroadcastRepository)(nil).ListBroadcastsTx), arg0, arg1, arg2)
 }
 
+// UpdateBroadcastAttachments mocks base method.
+func (m *MockBroadcastRepository) UpdateBroadcastAttachments(arg0 context.Context, arg1 *domain.Broadcast) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBroadcastAttachments", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateBroadcastAttachments indicates an expected call of UpdateBroadcastAttachments.
+func (mr *MockBroadcastRepositoryMockRecorder) UpdateBroadcastAttachments(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBroadcastAttachments", reflect.TypeOf((*MockBroadcastRepository)(nil).UpdateBroadcastAttachments), arg0, arg1)
+}
+
 // UpdateBroadcast mocks base method.
 func (m *MockBroadcastRepository) UpdateBroadcast(arg0 context.Context, arg1 *domain.Broadcast) error {
 	m.ctrl.T.Helper()

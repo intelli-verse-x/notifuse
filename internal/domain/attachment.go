@@ -1,14 +1,27 @@
 package domain
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql/driver"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
+)
+
+// Attachment size limits are on the decoded file bytes.
+// Amazon SES accepts a raw message up to 40MB. Base64 expands a file by about
+// one third, so a 10MB PDF is about 13.4MB in the MIME message and still fits
+// under that limit together with the HTML body.
+const (
+	MaxAttachmentCount       = 20
+	MaxAttachmentBytes       = 10 * 1024 * 1024
+	MaxAttachmentsTotalBytes = 10 * 1024 * 1024
 )
 
 //go:generate mockgen -destination mocks/mock_attachment_repository.go -package mocks github.com/Notifuse/notifuse/internal/domain AttachmentRepository
@@ -206,9 +219,8 @@ func ValidateAttachments(attachments []Attachment) error {
 		return nil
 	}
 
-	// Check maximum number of attachments
-	if len(attachments) > 20 {
-		return fmt.Errorf("maximum 20 attachments allowed, got %d", len(attachments))
+	if len(attachments) > MaxAttachmentCount {
+		return fmt.Errorf("maximum %d attachments allowed, got %d", MaxAttachmentCount, len(attachments))
 	}
 
 	totalSize := int64(0)
@@ -224,25 +236,56 @@ func ValidateAttachments(attachments []Attachment) error {
 
 		size := int64(len(content))
 
-		// Check individual file size (3MB per file recommended)
-		const maxFileSize = 3 * 1024 * 1024
-		if size > maxFileSize {
-			return fmt.Errorf("attachment %d (%s): size %d bytes exceeds maximum of %d bytes (3MB)",
-				i, att.Filename, size, maxFileSize)
+		if size > MaxAttachmentBytes {
+			return fmt.Errorf("attachment %d (%s): size %d bytes exceeds maximum of %d bytes (%dMB)",
+				i, att.Filename, size, MaxAttachmentBytes, MaxAttachmentBytes/(1024*1024))
 		}
 
 		totalSize += size
 	}
 
-	// Check total size (10MB total, well under AWS SES 40MB limit)
-	// AWS SES allows up to 40MB total message size as documented at:
-	// https://docs.aws.amazon.com/ses/latest/dg/attachments.html
-	// We use 10MB as a conservative limit to account for email body and headers
-	const maxTotalSize = 10 * 1024 * 1024
-	if totalSize > maxTotalSize {
-		return fmt.Errorf("total attachment size %d bytes exceeds maximum of %d bytes (10MB)",
-			totalSize, maxTotalSize)
+	// Decoded bytes. The MIME message is larger after base64, and must stay
+	// under the SES 40MB raw-message limit.
+	if totalSize > MaxAttachmentsTotalBytes {
+		return fmt.Errorf("total attachment size %d bytes exceeds maximum of %d bytes (%dMB)",
+			totalSize, MaxAttachmentsTotalBytes, MaxAttachmentsTotalBytes/(1024*1024))
 	}
 
 	return nil
+}
+
+// AttachmentMetadataList is the attachment metadata stored on a broadcast.
+// The file bytes live once in message_attachments, keyed by checksum, so the
+// same PDF is reused for every recipient without copying it into each queue row.
+type AttachmentMetadataList []AttachmentMetadata
+
+// Value implements driver.Valuer for JSONB storage.
+func (a AttachmentMetadataList) Value() (driver.Value, error) {
+	if a == nil {
+		return nil, nil
+	}
+	return json.Marshal(a)
+}
+
+// Scan implements sql.Scanner for JSONB storage.
+func (a *AttachmentMetadataList) Scan(value interface{}) error {
+	if a == nil {
+		return fmt.Errorf("AttachmentMetadataList: nil receiver")
+	}
+	if value == nil {
+		*a = nil
+		return nil
+	}
+
+	b, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("AttachmentMetadataList: type assertion to []byte failed")
+	}
+	if len(b) == 0 {
+		*a = nil
+		return nil
+	}
+
+	cloned := bytes.Clone(b)
+	return json.Unmarshal(cloned, a)
 }

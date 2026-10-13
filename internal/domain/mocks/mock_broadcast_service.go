@@ -194,6 +194,21 @@ func (mr *MockBroadcastServiceMockRecorder) SelectWinner(arg0, arg1, arg2, arg3 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectWinner", reflect.TypeOf((*MockBroadcastService)(nil).SelectWinner), arg0, arg1, arg2, arg3)
 }
 
+// SetAttachments mocks base method.
+func (m *MockBroadcastService) SetAttachments(arg0 context.Context, arg1 *domain.SetBroadcastAttachmentsRequest) (*domain.Broadcast, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetAttachments", arg0, arg1)
+	ret0, _ := ret[0].(*domain.Broadcast)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetAttachments indicates an expected call of SetAttachments.
+func (mr *MockBroadcastServiceMockRecorder) SetAttachments(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAttachments", reflect.TypeOf((*MockBroadcastService)(nil).SetAttachments), arg0, arg1)
+}
+
 // SendToIndividual mocks base method.
 func (m *MockBroadcastService) SendToIndividual(arg0 context.Context, arg1 *domain.SendToIndividualRequest) error {
 	m.ctrl.T.Helper()

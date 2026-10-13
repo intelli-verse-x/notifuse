@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [33.0] - 2026-10-13
+
+- **Feature**: Broadcasts can attach a file, including a PDF up to 10MB. Upload it once on the broadcast (`POST /api/broadcasts.setAttachments`). Scheduled sends and one-by-one sends attach that same file. The bytes are stored once by checksum and are not copied into every queue row. Amazon SES still receives a real attachment.
+
 ## [32.3] - 2026-06-01
 
 - **Security**: Broadcast data-feed endpoints (`broadcasts.refreshGlobalFeed`, `broadcasts.testRecipientFeed`) are no longer a server-side request forgery (SSRF) vector and now require `broadcasts:write`. The data-feed fetcher used a plain HTTP client with no address validation, so any authenticated workspace member — including a read-only member — could make the server fetch an arbitrary URL (internal services, the private network, or the cloud instance metadata endpoint) and read back the JSON response. The fetcher now uses the SSRF-safe client already used for favicon detection (dial-time rejection of private/loopback/link-local/reserved ranges, redirect re-validation, DNS-rebinding protection), and both service methods enforce the same write permission as broadcast creation. Trusted self-hosted deployments that intentionally fetch feeds from their internal network can opt out with `BROADCAST_DATA_FEED_ALLOW_PRIVATE_HOSTS=true`.

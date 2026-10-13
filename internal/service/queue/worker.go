@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ type EmailQueueWorker struct {
 	workspaceRepo      domain.WorkspaceRepository
 	emailService       domain.EmailServiceInterface
 	messageHistoryRepo domain.MessageHistoryRepository
+	attachmentRepo     domain.AttachmentRepository
 	rateLimiter        *IntegrationRateLimiter
 	circuitBreaker     *IntegrationCircuitBreaker
 	errorClassifier    *emailerror.Classifier
@@ -101,6 +103,12 @@ func NewEmailQueueWorker(
 		config:             config,
 		logger:             log,
 	}
+}
+
+// SetAttachmentRepository loads broadcast files at send time.
+// Queue rows store only the checksum, so one PDF is shared by every recipient.
+func (w *EmailQueueWorker) SetAttachmentRepository(repo domain.AttachmentRepository) {
+	w.attachmentRepo = repo
 }
 
 // SetCallbacks sets callback functions for progress tracking
@@ -319,6 +327,15 @@ func (w *EmailQueueWorker) processEntry(workspace *domain.Workspace, entry *doma
 		&integration.EmailProvider,
 	)
 
+	if err := w.loadQueuedAttachments(w.ctx, workspace.ID, entry, request); err != nil {
+		w.logger.WithFields(map[string]interface{}{
+			"entry_id": entry.ID,
+			"error":    err.Error(),
+		}).Error("Failed to load email attachments")
+		w.handleError(workspace, entry, err, nil)
+		return
+	}
+
 	// Send the email
 	err := w.emailService.SendEmail(w.ctx, *request, true) // isMarketing = true
 	if err != nil {
@@ -457,7 +474,8 @@ func (w *EmailQueueWorker) upsertMessageHistory(
 		TemplateVersion: int64(entry.Payload.TemplateVersion),
 		Channel:         "email",
 		MessageData:     domain.MessageData{Data: entry.Payload.TemplateData}, // Include template data for logging
-		SentAt:          entry.CreatedAt,                                      // Use queue entry creation time (stable across retries)
+		Attachments:     []domain.AttachmentMetadata(entry.Payload.AttachmentRefs),
+		SentAt:          entry.CreatedAt, // Use queue entry creation time (stable across retries)
 		CreatedAt:       entry.CreatedAt,
 		UpdatedAt:       now,
 	}
@@ -491,6 +509,37 @@ func (w *EmailQueueWorker) upsertMessageHistory(
 			"error":      err.Error(),
 		}).Warn("Failed to upsert message history")
 	}
+}
+
+// loadQueuedAttachments fills the provider request from checksums stored on the queue row.
+func (w *EmailQueueWorker) loadQueuedAttachments(ctx context.Context, workspaceID string, entry *domain.EmailQueueEntry, request *domain.SendEmailProviderRequest) error {
+	refs := entry.Payload.AttachmentRefs
+	if len(refs) == 0 {
+		return nil
+	}
+	if w.attachmentRepo == nil {
+		return fmt.Errorf("email has attachments but attachment storage is not configured")
+	}
+
+	attachments := make([]domain.Attachment, 0, len(refs))
+	for i, ref := range refs {
+		record, err := w.attachmentRepo.Get(ctx, workspaceID, ref.Checksum)
+		if err != nil {
+			return fmt.Errorf("attachment %d (%s): %w", i, ref.Filename, err)
+		}
+		disposition := ref.Disposition
+		if disposition == "" {
+			disposition = "attachment"
+		}
+		attachments = append(attachments, domain.Attachment{
+			Filename:    ref.Filename,
+			Content:     base64.StdEncoding.EncodeToString(record.Content),
+			ContentType: ref.ContentType,
+			Disposition: disposition,
+		})
+	}
+	request.EmailOptions.Attachments = attachments
+	return nil
 }
 
 // GetStats returns statistics about the rate limiters

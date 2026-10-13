@@ -4155,7 +4155,7 @@
               },
               "attachments": {
                 "type": "array",
-                "description": "Email attachments (max 20 files, 3MB per file, 10MB total)",
+                "description": "Email attachments (max 20 files, 10MB per file, 10MB total)",
                 "items": {
                   "$ref": "#/components/schemas/EmailAttachment"
                 },
@@ -5225,7 +5225,7 @@
           "content": {
             "type": "string",
             "format": "byte",
-            "description": "Base64-encoded file content (max 3MB per file)",
+            "description": "Base64-encoded file content (max 10MB per file)",
             "example": "JVBERi0xLjQKJeLjz9MKMy4uLg=="
           },
           "content_type": {

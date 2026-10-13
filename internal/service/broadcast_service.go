@@ -31,6 +31,7 @@ type BroadcastService struct {
 	listService        domain.ListService
 	dataFeedFetcher    broadcast.DataFeedFetcher
 	apiEndpoint        string
+	attachmentSvc      *AttachmentService
 }
 
 // NewBroadcastService creates a new broadcast service
@@ -73,6 +74,11 @@ func NewBroadcastService(
 // SetTaskService sets the task service (used to avoid circular dependencies)
 func (s *BroadcastService) SetTaskService(taskService domain.TaskService) {
 	s.taskService = taskService
+}
+
+// SetAttachmentService stores uploaded files once and reloads them at send time.
+func (s *BroadcastService) SetAttachmentService(attachmentSvc *AttachmentService) {
+	s.attachmentSvc = attachmentSvc
 }
 
 // CreateBroadcast creates a new broadcast
@@ -1181,6 +1187,11 @@ func (s *BroadcastService) SendToIndividual(ctx context.Context, request *domain
 		return fmt.Errorf("template compilation failed: %s", errMsg)
 	}
 
+	attachments, err := s.hydrateBroadcastAttachments(ctx, request.WorkspaceID, broadcast.Attachments)
+	if err != nil {
+		return err
+	}
+
 	// Create SendEmailProviderRequest
 	emailRequest := domain.SendEmailProviderRequest{
 		WorkspaceID:   request.WorkspaceID,
@@ -1193,7 +1204,8 @@ func (s *BroadcastService) SendToIndividual(ctx context.Context, request *domain
 		Content:       *compiledTemplate.HTML,
 		Provider:      emailProvider,
 		EmailOptions: domain.EmailOptions{
-			ReplyTo: emailContent.ReplyTo,
+			ReplyTo:     emailContent.ReplyTo,
+			Attachments: attachments,
 		},
 	}
 
@@ -1222,13 +1234,82 @@ func (s *BroadcastService) SendToIndividual(ctx context.Context, request *domain
 		MessageData: domain.MessageData{
 			Data: templateData,
 		},
-		SentAt:    now,
-		CreatedAt: now,
-		UpdatedAt: now,
+		SentAt:      now,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+		Attachments: []domain.AttachmentMetadata(broadcast.Attachments),
 	}
 
 	// Record message in history
 	return s.messageHistoryRepo.Create(ctx, request.WorkspaceID, workspace.Settings.SecretKey, message)
+}
+
+// hydrateBroadcastAttachments loads the broadcast's stored files for one send.
+func (s *BroadcastService) hydrateBroadcastAttachments(ctx context.Context, workspaceID string, metadata domain.AttachmentMetadataList) ([]domain.Attachment, error) {
+	if len(metadata) == 0 {
+		return nil, nil
+	}
+	if s.attachmentSvc == nil {
+		return nil, fmt.Errorf("broadcast has attachments but attachment storage is not configured")
+	}
+	attachments, err := s.attachmentSvc.Hydrate(ctx, workspaceID, []domain.AttachmentMetadata(metadata))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load broadcast attachments: %w", err)
+	}
+	return attachments, nil
+}
+
+// SetAttachments stores files once on the broadcast. Later sends, including a
+// scheduled blast, attach those same files. An empty list removes them.
+func (s *BroadcastService) SetAttachments(ctx context.Context, request *domain.SetBroadcastAttachmentsRequest) (*domain.Broadcast, error) {
+	var err error
+	ctx, _, userWorkspace, err := s.authService.AuthenticateUserForWorkspace(ctx, request.WorkspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate user: %w", err)
+	}
+	if !userWorkspace.HasPermission(domain.PermissionResourceBroadcasts, domain.PermissionTypeWrite) {
+		return nil, domain.NewPermissionError(
+			domain.PermissionResourceBroadcasts,
+			domain.PermissionTypeWrite,
+			"Insufficient permissions: write access to broadcasts required",
+		)
+	}
+	if err := request.Validate(); err != nil {
+		return nil, &domain.ErrBroadcastAttachment{Reason: err.Error()}
+	}
+
+	broadcast, err := s.repo.GetBroadcast(ctx, request.WorkspaceID, request.ID)
+	if err != nil {
+		return nil, err
+	}
+	if domain.BroadcastAttachmentsLocked(broadcast.Status) {
+		return nil, &domain.ErrBroadcastAttachment{
+			Reason: fmt.Sprintf("cannot change attachments while the broadcast is %s", broadcast.Status),
+		}
+	}
+
+	if len(request.Attachments) == 0 {
+		broadcast.Attachments = nil
+	} else {
+		if s.attachmentSvc == nil {
+			return nil, fmt.Errorf("attachment storage is not configured")
+		}
+		metadata, err := s.attachmentSvc.ProcessAttachments(ctx, request.WorkspaceID, request.Attachments)
+		if err != nil {
+			return nil, fmt.Errorf("failed to store attachments: %w", err)
+		}
+		for i := range metadata {
+			if metadata[i].Disposition == "" {
+				metadata[i].Disposition = "attachment"
+			}
+		}
+		broadcast.Attachments = domain.AttachmentMetadataList(metadata)
+	}
+
+	if err := s.repo.UpdateBroadcastAttachments(ctx, broadcast); err != nil {
+		return nil, err
+	}
+	return broadcast, nil
 }
 
 // GetTestResults retrieves A/B test results for a broadcast

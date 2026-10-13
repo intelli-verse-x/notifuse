@@ -413,6 +413,16 @@ ENDPOINTS: list[Endpoint] = [
         P("audience", "object"), P("schedule", "object"),
         P("test_settings", "object"), P("utm_parameters", "object"), P("metadata", "object"),
     ]),
+    Endpoint("broadcasts_set_attachments", "POST", "/api/broadcasts.setAttachments",
+             "Attach files to a broadcast. The same files are sent with every recipient. Upload once. "
+             "Each file may be up to 10MB. Pass an empty list to remove them.",
+             tag="broadcasts", body=[
+                 WID, P("id", required=True, desc="Broadcast ID."),
+                 P("attachments", "array", item_type="object", required=True,
+                   desc="Files to attach. Each item: filename, content (base64), content_type "
+                        "(application/pdf for a PDF), disposition (attachment). Empty array removes files. "
+                        "Max 10MB decoded per file and 10MB total."),
+             ]),
     Endpoint("broadcasts_schedule", "POST", "/api/broadcasts.schedule",
              "Schedule or immediately send a broadcast.", tag="broadcasts", body=[
                  WID, P("id", required=True),

@@ -364,6 +364,7 @@ func (s *queueMessageSender) buildQueueEntry(
 			EmailOptions: domain.EmailOptions{
 				ReplyTo: emailContent.ReplyTo,
 			},
+			AttachmentRefs: broadcast.Attachments,
 			TemplateVersion: int(template.Version),
 			ListID:          broadcast.Audience.List,
 			TemplateData:    data, // Store template data for message history

@@ -286,6 +286,10 @@ type Broadcast struct {
 
 	// Data feed settings (global and recipient feeds)
 	DataFeed *DataFeedSettings `json:"data_feed,omitempty"`
+
+	// Attachments are stored once (checksum + filename). Every recipient of
+	// this broadcast receives the same files. Bytes live in message_attachments.
+	Attachments AttachmentMetadataList `json:"attachments,omitempty"`
 }
 
 // UTMParameters contains UTM tracking parameters for the broadcast
@@ -699,6 +703,40 @@ func (r *SendToIndividualRequest) Validate() error {
 	return nil
 }
 
+// SetBroadcastAttachmentsRequest stores files on a broadcast. The same files
+// are attached to every recipient. An empty list removes the files.
+// Content is base64. Each file may be up to 10MB decoded.
+type SetBroadcastAttachmentsRequest struct {
+	WorkspaceID string       `json:"workspace_id"`
+	ID          string       `json:"id"`
+	Attachments []Attachment `json:"attachments"`
+}
+
+// Validate validates the attachment upload.
+func (r *SetBroadcastAttachmentsRequest) Validate() error {
+	if r.WorkspaceID == "" {
+		return fmt.Errorf("workspace_id is required")
+	}
+	if r.ID == "" {
+		return fmt.Errorf("id is required")
+	}
+	if err := ValidateAttachments(r.Attachments); err != nil {
+		return fmt.Errorf("invalid attachments: %w", err)
+	}
+	return nil
+}
+
+// BroadcastAttachmentsLocked reports whether a broadcast is in the middle of
+// enqueueing, so changing its files would attach them to only some recipients.
+func BroadcastAttachmentsLocked(status BroadcastStatus) bool {
+	switch status {
+	case BroadcastStatusProcessing, BroadcastStatusTesting, BroadcastStatusWinnerSelected:
+		return true
+	default:
+		return false
+	}
+}
+
 // GetBroadcastsRequest is used to extract query parameters for listing broadcasts
 type GetBroadcastsRequest struct {
 	WorkspaceID   string `json:"workspace_id"`
@@ -1013,6 +1051,9 @@ type BroadcastService interface {
 	// SendToIndividual sends a broadcast to an individual recipient
 	SendToIndividual(ctx context.Context, request *SendToIndividualRequest) error
 
+	// SetAttachments stores files once and attaches them to every send of this broadcast.
+	SetAttachments(ctx context.Context, request *SetBroadcastAttachmentsRequest) (*Broadcast, error)
+
 	// GetTestResults retrieves A/B test results for a broadcast
 	GetTestResults(ctx context.Context, workspaceID, broadcastID string) (*TestResultsResponse, error)
 
@@ -1052,6 +1093,10 @@ type BroadcastRepository interface {
 	CreateBroadcastTx(ctx context.Context, tx *sql.Tx, broadcast *Broadcast) error
 	GetBroadcastTx(ctx context.Context, tx *sql.Tx, workspaceID, broadcastID string) (*Broadcast, error)
 	UpdateBroadcastTx(ctx context.Context, tx *sql.Tx, broadcast *Broadcast) error
+	// UpdateBroadcastAttachments updates only the stored attachment metadata.
+	// Unlike UpdateBroadcastTx it is allowed after a broadcast has been sent,
+	// so a later one-by-one send can include a PDF.
+	UpdateBroadcastAttachments(ctx context.Context, broadcast *Broadcast) error
 	// UpdateBroadcastStatusTx updates only status-lifecycle fields (status,
 	// timestamps, pause_reason). Unlike UpdateBroadcastTx, it does not reject
 	// already-terminal states — used by pause/resume/cancel flows that need to
@@ -1060,6 +1105,16 @@ type BroadcastRepository interface {
 	UpdateBroadcastStatusTx(ctx context.Context, tx *sql.Tx, broadcast *Broadcast) error
 	DeleteBroadcastTx(ctx context.Context, tx *sql.Tx, workspaceID, broadcastID string) error
 	ListBroadcastsTx(ctx context.Context, tx *sql.Tx, params ListBroadcastsParams) (*BroadcastListResponse, error)
+}
+
+// ErrBroadcastAttachment is a client error for an attachment upload that was rejected.
+type ErrBroadcastAttachment struct {
+	Reason string
+}
+
+// Error returns the rejection reason.
+func (e *ErrBroadcastAttachment) Error() string {
+	return e.Reason
 }
 
 // ErrBroadcastNotFound is an error type for when a broadcast is not found

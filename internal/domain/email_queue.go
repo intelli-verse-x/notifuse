@@ -83,6 +83,10 @@ type EmailQueuePayload struct {
 	TemplateVersion int                    `json:"template_version"`        // Needed for message_history
 	ListID          string                 `json:"list_id,omitempty"`       // For broadcasts
 	TemplateData    map[string]interface{} `json:"template_data,omitempty"` // For message history logging
+
+	// AttachmentRefs point at bytes stored once per file. The queue row does
+	// not contain the file content.
+	AttachmentRefs AttachmentMetadataList `json:"attachment_refs,omitempty"`
 }
 
 // ToSendEmailProviderRequest converts the payload to a SendEmailProviderRequest

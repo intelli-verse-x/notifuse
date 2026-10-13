@@ -149,6 +149,22 @@ export interface Broadcast {
   pause_reason?: string
   // Data feed settings (consolidated)
   data_feed?: DataFeedSettings
+  // Files stored once and attached to every send. Bytes are not included.
+  attachments?: BroadcastAttachment[]
+}
+
+export interface BroadcastAttachment {
+  checksum: string
+  filename: string
+  content_type: string
+  disposition: string
+}
+
+export interface BroadcastAttachmentUpload {
+  filename: string
+  content: string
+  content_type?: string
+  disposition?: string
 }
 
 export interface CreateBroadcastRequest {
@@ -327,6 +343,14 @@ export const broadcastApi = {
 
   update: async (params: UpdateBroadcastRequest): Promise<GetBroadcastResponse> => {
     return api.post<GetBroadcastResponse>('/api/broadcasts.update', params)
+  },
+
+  setAttachments: async (params: {
+    workspace_id: string
+    id: string
+    attachments: BroadcastAttachmentUpload[]
+  }): Promise<GetBroadcastResponse> => {
+    return api.post<GetBroadcastResponse>('/api/broadcasts.setAttachments', params)
   },
 
   schedule: async (params: ScheduleBroadcastRequest): Promise<{ success: boolean }> => {

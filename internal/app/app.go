@@ -704,6 +704,9 @@ func (a *App) InitServices() error {
 		a.dataFeedFetcher = broadcast.NewDataFeedFetcher(a.logger)
 	}
 
+	attachmentRepo := repository.NewAttachmentRepository(a.workspaceRepo)
+	attachmentService := service.NewAttachmentService(attachmentRepo)
+
 	// Initialize broadcast service
 	a.broadcastService = service.NewBroadcastService(
 		a.logger,
@@ -722,6 +725,7 @@ func (a *App) InitServices() error {
 		a.dataFeedFetcher,    // Data feed fetcher for global/recipient data
 		a.config.APIEndpoint, // API endpoint for tracking URLs
 	)
+	a.broadcastService.SetAttachmentService(attachmentService)
 
 	// Create broadcast factory with refactored components
 	broadcastConfig := broadcast.DefaultConfig()
@@ -945,6 +949,7 @@ func (a *App) InitServices() error {
 		queue.DefaultWorkerConfig(),
 		a.logger,
 	)
+	a.emailQueueWorker.SetAttachmentRepository(attachmentRepo)
 
 	// Initialize automation service
 	a.automationService = service.NewAutomationService(

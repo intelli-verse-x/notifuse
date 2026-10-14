@@ -1375,6 +1375,62 @@ func TestQueueMessageSender_BuildQueueEntry(t *testing.T) {
 		assert.Equal(t, "https://example.com/unsubscribe?token=abc123", entry.Payload.EmailOptions.ListUnsubscribeURL)
 	})
 
+	t.Run("keeps one PDF reference for every recipient", func(t *testing.T) {
+		emailSender := domain.NewEmailSender("sender@example.com", "Test Sender")
+		emailProvider := &domain.EmailProvider{
+			Kind:    domain.EmailProviderKindSMTP,
+			Senders: []domain.EmailSender{emailSender},
+		}
+
+		broadcast := &domain.Broadcast{
+			ID: "broadcast-1",
+			Audience: domain.AudienceSettings{
+				List: "investors",
+			},
+			Attachments: domain.AttachmentMetadataList{{
+				Checksum:    "deck-checksum",
+				Filename:    "Curio_Investor_Presentation.pdf",
+				ContentType: "application/pdf",
+				Disposition: "attachment",
+			}},
+			UTMParameters: &domain.UTMParameters{},
+		}
+
+		template := &domain.Template{
+			ID:      "template-1",
+			Version: 2,
+			Email: &domain.EmailTemplate{
+				SenderID:         emailSender.ID,
+				Subject:          "Curio | Building the Future of Personal Knowledge",
+				VisualEditorTree: createQueueValidTestTree(createQueueTestTextBlock("txt1", "Hello")),
+			},
+		}
+
+		entry, err := qms.buildQueueEntry(
+			context.Background(),
+			"workspace-1",
+			"integration-1",
+			"https://api.test.com",
+			true,
+			broadcast,
+			"msg-123",
+			"investor@example.com",
+			template,
+			map[string]interface{}{},
+			emailProvider,
+			"",
+			"",
+		)
+
+		require.NoError(t, err)
+		require.Len(t, entry.Payload.AttachmentRefs, 1)
+		assert.Equal(t, "deck-checksum", entry.Payload.AttachmentRefs[0].Checksum)
+		assert.Equal(t, "Curio_Investor_Presentation.pdf", entry.Payload.AttachmentRefs[0].Filename)
+		assert.Empty(t, entry.Payload.EmailOptions.Attachments)
+		assert.Equal(t, "investors", entry.Payload.ListID)
+		assert.Equal(t, 2, entry.Payload.TemplateVersion)
+	})
+
 	t.Run("returns error when no sender configured", func(t *testing.T) {
 		emailProvider := &domain.EmailProvider{
 			Kind:    domain.EmailProviderKindSMTP,

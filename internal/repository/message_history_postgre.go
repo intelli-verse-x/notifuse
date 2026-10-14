@@ -146,6 +146,17 @@ func messageHistorySelectFields() string {
 			unsubscribed_at, created_at, updated_at`
 }
 
+// messageAttachmentsArg encodes attachment metadata for a JSONB column.
+// A plain []AttachmentMetadata is rejected by database/sql ("unsupported type
+// ... a slice of struct"), which turned a broadcast send that had a PDF into
+// an HTTP 500 after the file was already stored. Messages with no file stay NULL.
+func messageAttachmentsArg(attachments []domain.AttachmentMetadata) (interface{}, error) {
+	if len(attachments) == 0 {
+		return nil, nil
+	}
+	return domain.AttachmentMetadataList(attachments).Value()
+}
+
 // Create adds a new message history record
 func (r *MessageHistoryRepository) Create(ctx context.Context, workspaceID string, secretKey string, message *domain.MessageHistory) error {
 	// Get the workspace database connection
@@ -160,10 +171,9 @@ func (r *MessageHistoryRepository) Create(ctx context.Context, workspaceID strin
 		return fmt.Errorf("failed to encrypt message data: %w", err)
 	}
 
-	// Serialize attachments to JSON for storage
-	var attachmentsJSON interface{}
-	if len(message.Attachments) > 0 {
-		attachmentsJSON = message.Attachments
+	attachmentsJSON, err := messageAttachmentsArg(message.Attachments)
+	if err != nil {
+		return fmt.Errorf("failed to encode attachments: %w", err)
 	}
 
 	query := `
@@ -231,10 +241,9 @@ func (r *MessageHistoryRepository) Upsert(ctx context.Context, workspaceID strin
 		return fmt.Errorf("failed to encrypt message data: %w", err)
 	}
 
-	// Serialize attachments to JSON for storage
-	var attachmentsJSON interface{}
-	if len(message.Attachments) > 0 {
-		attachmentsJSON = message.Attachments
+	attachmentsJSON, err := messageAttachmentsArg(message.Attachments)
+	if err != nil {
+		return fmt.Errorf("failed to encode attachments: %w", err)
 	}
 
 	query := `
@@ -299,10 +308,9 @@ func (r *MessageHistoryRepository) Update(ctx context.Context, workspaceID strin
 		return fmt.Errorf("failed to get workspace connection: %w", err)
 	}
 
-	// Serialize attachments to JSON for storage
-	var attachmentsJSON interface{}
-	if len(message.Attachments) > 0 {
-		attachmentsJSON = message.Attachments
+	attachmentsJSON, err := messageAttachmentsArg(message.Attachments)
+	if err != nil {
+		return fmt.Errorf("failed to encode attachments: %w", err)
 	}
 
 	query := `

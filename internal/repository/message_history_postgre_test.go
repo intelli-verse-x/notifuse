@@ -96,6 +96,33 @@ func createSampleMessageHistory() *domain.MessageHistory {
 	}
 }
 
+func TestMessageAttachmentsArg_IsSafeForPostgres(t *testing.T) {
+	meta := []domain.AttachmentMetadata{{
+		Checksum:    "abc",
+		Filename:    "Curio_Investor_Presentation.pdf",
+		ContentType: "application/pdf",
+		Disposition: "attachment",
+	}}
+
+	// The slice itself is what made broadcast send-to-one return 500.
+	_, err := driver.DefaultParameterConverter.ConvertValue(meta)
+	require.Error(t, err)
+
+	stored, err := messageAttachmentsArg(meta)
+	require.NoError(t, err)
+	_, err = driver.DefaultParameterConverter.ConvertValue(stored)
+	require.NoError(t, err)
+
+	raw, ok := stored.([]byte)
+	require.True(t, ok)
+	require.Contains(t, string(raw), "Curio_Investor_Presentation.pdf")
+	require.Contains(t, string(raw), "application/pdf")
+
+	empty, err := messageAttachmentsArg(nil)
+	require.NoError(t, err)
+	require.Nil(t, empty)
+}
+
 func TestMessageHistoryRepository_Create(t *testing.T) {
 	mockWorkspaceRepo, repo, mock, db, cleanup := setupMessageHistoryTest(t)
 	defer cleanup()

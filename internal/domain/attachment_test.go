@@ -408,7 +408,9 @@ func TestAttachment_ToMetadata(t *testing.T) {
 
 func TestValidateAttachments(t *testing.T) {
 	validContent := base64.StdEncoding.EncodeToString([]byte("test content"))
-	largeContent := base64.StdEncoding.EncodeToString(make([]byte, 4*1024*1024)) // 4MB
+	// Limit is 10MB per attachment; 4MB must still pass, 11MB must fail.
+	okLargeContent := base64.StdEncoding.EncodeToString(make([]byte, 4*1024*1024))   // 4MB
+	tooLargeContent := base64.StdEncoding.EncodeToString(make([]byte, 11*1024*1024)) // 11MB
 
 	tests := []struct {
 		name        string
@@ -461,11 +463,21 @@ func TestValidateAttachments(t *testing.T) {
 			errMsg:  "maximum 20 attachments allowed, got 21",
 		},
 		{
-			name: "attachment too large (4MB)",
+			name: "attachment within 10MB limit (4MB)",
+			attachments: []Attachment{
+				{
+					Filename: "ok-large.pdf",
+					Content:  okLargeContent,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "attachment too large (11MB)",
 			attachments: []Attachment{
 				{
 					Filename: "large.pdf",
-					Content:  largeContent,
+					Content:  tooLargeContent,
 				},
 			},
 			wantErr: true,

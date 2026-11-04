@@ -433,6 +433,7 @@ func TestBroadcastRepository_CreateBroadcast_Success(t *testing.T) {
 			sqlmock.AnyArg(), // paused_at
 			sqlmock.AnyArg(), // pause_reason
 			sqlmock.AnyArg(), // data_feed (consolidated)
+			sqlmock.AnyArg(), // attachments
 		).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -519,6 +520,7 @@ func TestBroadcastRepository_GetBroadcast_Success(t *testing.T) {
 		"created_at", "updated_at",
 		"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 		"data_feed",
+		"attachments",
 	}).
 		AddRow(
 			broadcastID, workspaceID, "Test Broadcast", domain.BroadcastStatusDraft,
@@ -528,6 +530,7 @@ func TestBroadcastRepository_GetBroadcast_Success(t *testing.T) {
 			time.Now(), time.Now(),
 			nil, nil, nil, nil, nil,
 			nil, // data_feed
+			nil, // attachments
 		)
 
 	mock.ExpectQuery("SELECT").
@@ -576,6 +579,7 @@ func TestBroadcastRepository_GetBroadcast_NullPauseReason(t *testing.T) {
 		"created_at", "updated_at",
 		"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 		"data_feed",
+		"attachments",
 	}).
 		AddRow(
 			broadcastID, workspaceID, "Test Broadcast", domain.BroadcastStatusDraft,
@@ -585,6 +589,7 @@ func TestBroadcastRepository_GetBroadcast_NullPauseReason(t *testing.T) {
 			time.Now(), time.Now(),
 			nil, nil, nil, nil, nil, // NULL pause_reason
 			nil, // data_feed
+			nil, // attachments
 		)
 
 	mock.ExpectQuery("SELECT").
@@ -632,6 +637,7 @@ func TestBroadcastRepository_GetBroadcast_WithPauseReason(t *testing.T) {
 		"created_at", "updated_at",
 		"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 		"data_feed",
+		"attachments",
 	}).
 		AddRow(
 			broadcastID, workspaceID, "Test Broadcast", domain.BroadcastStatusPaused,
@@ -641,6 +647,7 @@ func TestBroadcastRepository_GetBroadcast_WithPauseReason(t *testing.T) {
 			time.Now(), time.Now(),
 			nil, nil, nil, time.Now(), expectedReason, // Non-NULL pause_reason
 			nil, // data_feed
+			nil, // attachments
 		)
 
 	mock.ExpectQuery("SELECT").
@@ -792,6 +799,7 @@ func TestBroadcastRepository_UpdateBroadcast_Success(t *testing.T) {
 			sqlmock.AnyArg(), // pause_reason
 			sqlmock.AnyArg(), // enqueued_count
 			sqlmock.AnyArg(), // data_feed (consolidated)
+			sqlmock.AnyArg(), // attachments
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -1068,11 +1076,13 @@ func TestBroadcastRepository_ListBroadcasts_RowsIterationError(t *testing.T) {
 		"created_at", "updated_at",
 		"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 		"data_feed",
+		"attachments",
 	}).
 		AddRow(
 			"bc123", workspaceID, "Broadcast 1", "draft", []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"),
 			"", nil, nil, 0, time.Now(), time.Now(), nil, nil, nil, nil, nil,
 			nil, // data_feed
+			nil, // attachments
 		).
 		RowError(0, iterationErr) // Set error on the first row
 
@@ -1186,16 +1196,19 @@ func TestBroadcastRepository_ListBroadcasts_WithStatus(t *testing.T) {
 		"created_at", "updated_at",
 		"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 		"data_feed",
+		"attachments",
 	}).
 		AddRow(
 			"bc123", workspaceID, "Broadcast 1", status, []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"),
 			"", nil, nil, 0, time.Now(), time.Now(), nil, nil, nil, nil, nil,
 			nil, // data_feed
+			nil, // attachments
 		).
 		AddRow(
 			"bc456", workspaceID, "Broadcast 2", status, []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"),
 			"", nil, nil, 0, time.Now(), time.Now(), nil, nil, nil, nil, nil,
 			nil, // data_feed
+			nil, // attachments
 		)
 
 	// Expect query with limit/offset
@@ -1253,12 +1266,14 @@ func TestBroadcastRepository_GetBroadcastTx(t *testing.T) {
 				"created_at", "updated_at",
 				"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 				"data_feed",
+				"attachments",
 			}).
 				AddRow(
 					broadcastID, workspaceID, "Test Broadcast", "draft",
 					[]byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"),
 					"", nil, nil, 0, time.Now(), time.Now(), nil, nil, nil, nil, nil,
 					nil, // data_feed
+					nil, // attachments
 				))
 		sqlMock.ExpectCommit()
 
@@ -1324,12 +1339,14 @@ func TestBroadcastRepository_GetBroadcast_WithDataFeed(t *testing.T) {
 		"created_at", "updated_at",
 		"started_at", "completed_at", "cancelled_at", "paused_at", "pause_reason",
 		"data_feed",
+		"attachments",
 	}).
 		AddRow(
 			broadcastID, workspaceID, "Test Broadcast", domain.BroadcastStatusDraft,
 			[]byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"), []byte("{}"),
 			"", nil, nil, 0, time.Now(), time.Now(), nil, nil, nil, nil, nil,
 			dataFeedJSON,
+			nil, // attachments
 		)
 
 	mock.ExpectQuery("SELECT").
@@ -1425,6 +1442,7 @@ func TestBroadcastRepository_CreateBroadcast_WithDataFeed(t *testing.T) {
 			sqlmock.AnyArg(), // paused_at
 			sqlmock.AnyArg(), // pause_reason
 			sqlmock.AnyArg(), // data_feed (consolidated)
+			sqlmock.AnyArg(), // attachments
 		).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -1501,6 +1519,7 @@ func TestBroadcastRepository_UpdateBroadcast_WithDataFeed(t *testing.T) {
 			sqlmock.AnyArg(), // pause_reason
 			sqlmock.AnyArg(), // enqueued_count
 			sqlmock.AnyArg(), // data_feed (consolidated)
+			sqlmock.AnyArg(), // attachments
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 

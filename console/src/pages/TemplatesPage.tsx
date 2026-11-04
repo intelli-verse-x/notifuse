@@ -349,11 +349,11 @@ export function TemplatesPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+              <h1 className="text-2xl font-semibold text-[#0b1433] m-0 tracking-tight">
                 {t`Mail designs`}
               </h1>
               {!isLoading && data?.templates && (
-                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                <span className="inline-flex items-center rounded-md border border-[#c7d2e8] bg-[#e8efff] px-2.5 py-0.5 text-xs font-medium text-[#2457d6]">
                   {data.templates.length}
                 </span>
               )}
@@ -385,7 +385,7 @@ export function TemplatesPage() {
       </div>
 
       {/* Category control deck */}
-      <div className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3">
+      <div className="rounded-xl border border-[#e6ecf8] bg-white px-4 py-3">
         <div className="flex items-start gap-3 flex-wrap">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 pt-1.5 shrink-0">
             {t`Category`}
@@ -401,11 +401,11 @@ export function TemplatesPage() {
       </div>
 
       {isLoading ? (
-        <div className="mailstudio-card overflow-hidden border border-white/10">
+        <div className="mailstudio-card overflow-hidden ">
           <Table columns={columns} dataSource={[]} loading={true} rowKey="id" />
         </div>
       ) : hasTemplates ? (
-        <div className="mailstudio-card overflow-hidden border border-white/10">
+        <div className="mailstudio-card overflow-hidden ">
           <Table
             columns={columns}
             dataSource={data.templates}
@@ -417,7 +417,7 @@ export function TemplatesPage() {
         <div className="mailstudio-card px-6 py-14 text-center">
           {selectedCategory === 'all' ? (
             <>
-              <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No mail designs yet`}</h2>
+              <h2 className="text-lg font-semibold text-[#0b1433] m-0">{t`No mail designs yet`}</h2>
               <p className="mt-2 mb-6 text-sm text-slate-400">
                 {t`Create your first design to use in broadcasts and automations.`}
               </p>
@@ -444,7 +444,7 @@ export function TemplatesPage() {
             </>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-slate-100 m-0">
+              <h2 className="text-lg font-semibold text-[#0b1433] m-0">
                 {t`No designs in this category`}
               </h2>
               <p className="mt-2 mb-0 text-sm text-slate-400">

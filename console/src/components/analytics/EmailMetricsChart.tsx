@@ -249,16 +249,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
     return value
   }
 
-  // Define colors that match the icon colors in the statistics cards
+  // Admin sky palette — matches metric pill dots
   const chartColors = {
-    count_sent: '#3b82f6', // blue-500
-    count_delivered: '#10b981', // green-500
-    count_opened: '#8b5cf6', // purple-500
-    count_clicked: '#06b6d4', // cyan-500
-    count_bounced: '#f97316', // orange-500
-    count_complained: '#f97316', // orange-500
-    count_unsubscribed: '#f97316', // orange-500
-    count_failed: '#ef4444' // red-500
+    count_sent: '#2457d6',
+    count_delivered: '#1d9a6c',
+    count_opened: '#7a5bff',
+    count_clicked: '#0891b2',
+    count_bounced: '#e2701f',
+    count_complained: '#d97706',
+    count_unsubscribed: '#e11d48',
+    count_failed: '#c2410c'
   }
 
   // Define measure titles for tooltip display
@@ -275,9 +275,9 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
 
   return (
     <div className="mailstudio-card p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-[#e6ecf8]">
         <div>
-          <h2 className="text-sm sm:text-base font-bold text-white tracking-tight m-0">{t`Email Metrics`}</h2>
+          <h2 className="text-sm sm:text-base font-bold text-[#0b1433] tracking-tight m-0">{t`Email Metrics`}</h2>
           <p className="text-xs text-slate-400 mt-0.5 mb-0">{t`Click metrics below to toggle chart lines`}</p>
         </div>
         <div className="w-full sm:w-auto overflow-x-auto">
@@ -304,23 +304,23 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
         />
       )}
 
-      {/* Stats Row - 8 metric pills */}
+      {/* Stats Row - 8 metric pills (Admin sky soft tints) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 sm:gap-3 mb-4 sm:mb-6">
         {/* Sent */}
         <Tooltip title={!visibleLines.count_sent ? t`${stats.count_sent} total sent (hidden)` : t`${stats.count_sent} total sent`}>
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_sent
-                ? 'bg-blue-950/40 border-blue-500/50 shadow-md shadow-blue-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#e8efff] border-[#9db6f0] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_sent')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2457d6] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#2457d6]"></span>
               {t`Sent`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(stats.count_sent)}
             </div>
           </div>
@@ -331,16 +331,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_delivered
-                ? 'bg-emerald-950/40 border-emerald-500/50 shadow-md shadow-emerald-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#e3f6ee] border-[#b7e5d0] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_delivered')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1d9a6c] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#1d9a6c]"></span>
               {t`Delivered`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_delivered, stats.count_sent))}
             </div>
           </div>
@@ -351,16 +351,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_opened
-                ? 'bg-purple-950/40 border-purple-500/50 shadow-md shadow-purple-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#f0ebff] border-[#c9b8ff] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_opened')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#7a5bff] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#7a5bff]"></span>
               {t`Opens`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_opened, stats.count_sent))}
             </div>
           </div>
@@ -371,16 +371,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_clicked
-                ? 'bg-cyan-950/40 border-cyan-500/50 shadow-md shadow-cyan-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#e8f7fb] border-[#9ed6e8] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_clicked')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#0891b2] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#0891b2]"></span>
               {t`Clicks`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_clicked, stats.count_sent))}
             </div>
           </div>
@@ -391,16 +391,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_bounced
-                ? 'bg-orange-950/40 border-orange-500/50 shadow-md shadow-orange-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#fff1e5] border-[#f0c49a] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_bounced')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#e2701f] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#e2701f]"></span>
               {t`Bounced`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_bounced, stats.count_sent))}
             </div>
           </div>
@@ -411,16 +411,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_complained
-                ? 'bg-amber-950/40 border-amber-500/50 shadow-md shadow-amber-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#fff8e8] border-[#f0d48a] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_complained')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#b45309] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#d97706]"></span>
               {t`Complaints`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_complained, stats.count_sent))}
             </div>
           </div>
@@ -431,16 +431,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_unsubscribed
-                ? 'bg-rose-950/40 border-rose-500/50 shadow-md shadow-rose-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#fef0f4] border-[#f5b8c8] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_unsubscribed')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#e11d48] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#e11d48]"></span>
               {t`Unsub.`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_unsubscribed, stats.count_sent))}
             </div>
           </div>
@@ -451,16 +451,16 @@ export const EmailMetricsChart: React.FC<EmailMetricsChartProps> = ({
           <div
             className={`p-3 rounded-xl border transition-all cursor-pointer select-none ${
               visibleLines.count_failed
-                ? 'bg-red-950/40 border-red-500/50 shadow-md shadow-red-500/10'
-                : 'bg-slate-900/60 border-slate-800/80 opacity-40 hover:opacity-70'
+                ? 'bg-[#fef2f2] border-[#f0b4a8] shadow-sm'
+                : 'bg-[#f2f6ff] border-[#e6ecf8] opacity-40 hover:opacity-70'
             }`}
             onClick={() => toggleLineVisibility('count_failed')}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-red-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#c2410c] mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#c2410c]"></span>
               {t`Failed`}
             </div>
-            <div className="text-base font-bold text-white">
+            <div className="text-base font-bold text-[#0b1433]">
               {formatStat(getRate(stats.count_failed, stats.count_sent))}
             </div>
           </div>

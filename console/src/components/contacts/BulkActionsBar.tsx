@@ -111,9 +111,9 @@ export function BulkActionsBar({
 
   return (
     <>
-      <div className="mb-0 rounded-xl border border-indigo-400/35 bg-slate-900 px-3 py-2.5 text-slate-100 shadow-[0_0_0_1px_rgba(99,102,241,0.08)]">
+      <div className="mb-0 rounded-xl border border-[#c7d2e8] bg-[#e8efff] px-3 py-2.5 text-[#0b1433] shadow-[0_2px_8px_rgba(11,20,51,0.06)]">
         <div className="flex items-center gap-3 flex-wrap">
-        <Text strong className="!text-slate-100">
+        <Text strong className="!text-[#0b1433]">
           <Plural
             value={selectedCount}
             one="# contact selected"

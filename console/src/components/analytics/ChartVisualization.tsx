@@ -122,8 +122,8 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
         animationDuration: 400,
         tooltip: {
           trigger: 'axis',
-          backgroundColor: '#1E293B',
-          borderColor: 'rgba(255, 255, 255, 0.12)',
+          backgroundColor: '#ffffff',
+          borderColor: '#c7d2e8',
           borderWidth: 1,
           padding: [10, 14],
           extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border-radius: 12px;',
@@ -144,7 +144,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               const measureName = param.seriesName || ''
               const title = measureTitles[measureName] || measureName
               const value = param.value || 0
-              const color = param.color || '#6366F1'
+              const color = param.color || '#2457d6'
 
               result += `<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 4px 0; font-size: 12px;">
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -188,7 +188,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           type: 'value',
           splitLine: {
             lineStyle: {
-              color: '#1E293B',
+              color: '#0b1433',
               type: 'dashed'
             }
           },

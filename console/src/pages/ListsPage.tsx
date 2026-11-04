@@ -158,11 +158,11 @@ export function ListsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+              <h1 className="text-2xl font-semibold text-[#0b1433] m-0 tracking-tight">
                 {t`Recipient lists`}
               </h1>
               {!isLoading && (
-                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                <span className="inline-flex items-center rounded-md border border-[#c7d2e8] bg-[#e8efff] px-2.5 py-0.5 text-xs font-medium text-[#2457d6]">
                   {numbro(listCount).format({ thousandSeparated: true, mantissa: 0 })}
                 </span>
               )}
@@ -219,7 +219,7 @@ export function ListsPage() {
                 styles={{
                   header: {
                     background: 'transparent',
-                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    borderBottom: '1px solid #e6ecf8',
                     padding: '12px 16px'
                   },
                   body: {
@@ -229,7 +229,7 @@ export function ListsPage() {
                 }}
                 title={
                   <div className="flex items-center gap-2 min-w-0">
-                    <Text strong className="!text-slate-100 truncate">
+                    <Text strong className="!text-[#0b1433] truncate">
                       {list.name}
                     </Text>
                     {list.is_public ? (
@@ -305,7 +305,7 @@ export function ListsPage() {
               >
                 <ListStats workspaceId={workspaceId} listId={list.id} />
 
-                <Divider className="!border-white/10 !my-4" />
+                <Divider className="!border-[#e6ecf8] !my-4" />
 
                 <Descriptions
                   size="small"
@@ -341,7 +341,7 @@ export function ListsPage() {
         </div>
       ) : (
         <div className="mailstudio-card px-6 py-14 text-center">
-          <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No recipient lists yet`}</h2>
+          <h2 className="text-lg font-semibold text-[#0b1433] m-0">{t`No recipient lists yet`}</h2>
           <p className="mt-2 mb-6 text-sm text-slate-400">
             {t`Create a list to group people for broadcasts and imports.`}
           </p>

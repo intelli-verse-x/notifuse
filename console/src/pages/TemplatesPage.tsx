@@ -47,6 +47,7 @@ const getIntegrationIcon = (integrationType: string) => {
 // Define search params interface
 interface TemplatesSearch {
   category?: string
+  id?: string
 }
 
 export function TemplatesPage() {
@@ -59,8 +60,10 @@ export function TemplatesPage() {
   const { workspaces } = useAuth()
   const { permissions } = useWorkspacePermissions(workspaceId)
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  // Deep-link preview: force All categories so the id can be found in the list.
+  const deepLinkId = typeof search.id === 'string' ? search.id.trim() : ''
   // Derive selectedCategory from search params, default to 'all'
-  const selectedCategory = search.category || 'all'
+  const selectedCategory = deepLinkId ? 'all' : search.category || 'all'
   // Add state for the test template modal
   const [testModalOpen, setTestModalOpen] = useState(false)
   const [templateToTest, setTemplateToTest] = useState<Template | null>(null)
@@ -68,7 +71,19 @@ export function TemplatesPage() {
   // Function to update search params
   const setSelectedCategory = (category: string) => {
     navigate({
-      search: (prev) => ({ ...prev, category: category === 'all' ? undefined : category })
+      search: (prev) => ({
+        ...prev,
+        category: category === 'all' ? undefined : category,
+        id: undefined
+      })
+    })
+  }
+
+  const clearDeepLinkPreview = () => {
+    if (!deepLinkId) return
+    navigate({
+      search: (prev) => ({ ...prev, id: undefined }),
+      replace: true
     })
   }
 
@@ -129,6 +144,10 @@ export function TemplatesPage() {
   }
 
   const hasTemplates = !isLoading && data?.templates && data.templates.length > 0
+  const deepLinkTemplate =
+    deepLinkId && data?.templates
+      ? data.templates.find((item) => item.id === deepLinkId) || null
+      : null
 
   // Add function to handle testing a template
   const handleTestTemplate = (template: Template) => {
@@ -457,6 +476,16 @@ export function TemplatesPage() {
             </>
           )}
         </div>
+      )}
+
+      {/* Portal / chat deep-link: open preview for ?id=<templateId> */}
+      {deepLinkTemplate && (
+        <TemplatePreviewDrawer
+          record={deepLinkTemplate}
+          workspace={workspace}
+          defaultOpen
+          onClose={clearDeepLinkPreview}
+        />
       )}
 
       {/* Use the new SendTemplateModal component */}

@@ -16,7 +16,11 @@ interface TemplatePreviewDrawerProps {
   workspace: Workspace
   templateData?: Record<string, unknown>
   messageHistory?: MessageHistory
-  children: React.ReactNode
+  /** Open the preview as soon as this drawer mounts (deep-link / SSO). */
+  defaultOpen?: boolean
+  /** Called when the drawer closes (used to clear ?id= from the URL). */
+  onClose?: () => void
+  children?: React.ReactNode
 }
 
 const TemplatePreviewDrawer: React.FC<TemplatePreviewDrawerProps> = ({
@@ -24,6 +28,8 @@ const TemplatePreviewDrawer: React.FC<TemplatePreviewDrawerProps> = ({
   workspace,
   templateData,
   messageHistory,
+  defaultOpen = false,
+  onClose,
   children
 }) => {
   const { t } = useLingui()
@@ -32,7 +38,7 @@ const TemplatePreviewDrawer: React.FC<TemplatePreviewDrawerProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [mjmlError, setMjmlError] = useState<MjmlCompileError | null>(null)
-  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [isOpen, setIsOpen] = useState<boolean>(defaultOpen)
   const [activeTabKey, setActiveTabKey] = useState<string>('1') // State for active tab
   const [renderedSubject, setRenderedSubject] = useState<string | null>(null)
   const [renderedSubjectPreview, setRenderedSubjectPreview] = useState<string | null>(null)
@@ -409,15 +415,20 @@ const TemplatePreviewDrawer: React.FC<TemplatePreviewDrawerProps> = ({
     </div>
   )
 
+  const handleClose = () => {
+    setIsOpen(false)
+    onClose?.()
+  }
+
   return (
     <>
-      <div onClick={() => setIsOpen(true)}>{children}</div>
+      {children ? <div onClick={() => setIsOpen(true)}>{children}</div> : null}
       <Drawer
         title={`${record.name}`}
         placement="right"
         width={650}
         open={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={handleClose}
         destroyOnClose={true}
         maskClosable={true}
         mask={true}

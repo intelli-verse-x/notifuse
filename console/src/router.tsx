@@ -45,6 +45,14 @@ export interface SignInSearch {
 export interface SsoSearch {
   token?: string
   workspaceId?: string
+  /** Open Templates with this design id after SSO (portal deep-link). */
+  template?: string
+}
+
+export interface TemplatesSearch {
+  category?: string
+  /** Auto-open the preview drawer for this template id. */
+  id?: string
 }
 
 export interface AcceptInvitationSearch {
@@ -89,7 +97,8 @@ const ssoRoute = createRoute({
   component: SsoPage,
   validateSearch: (search: Record<string, unknown>): SsoSearch => ({
     token: search.token as string | undefined,
-    workspaceId: search.workspaceId as string | undefined
+    workspaceId: search.workspaceId as string | undefined,
+    template: search.template as string | undefined
   })
 })
 
@@ -233,7 +242,11 @@ const workspaceSettingsRoute = createRoute({
 const workspaceTemplatesRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: '/templates',
-  component: TemplatesPage
+  component: TemplatesPage,
+  validateSearch: (search: Record<string, unknown>): TemplatesSearch => ({
+    category: search.category as string | undefined,
+    id: search.id as string | undefined
+  })
 })
 
 const workspaceAnalyticsRoute = createRoute({

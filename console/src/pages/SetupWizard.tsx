@@ -10,9 +10,9 @@ import { useLingui } from '@lingui/react/macro'
 import { MainLayout } from '../layouts/MainLayout'
 
 const setupCardClass =
-  'w-full max-w-3xl p-8 rounded-2xl bg-slate-900/80 backdrop-blur-2xl border border-slate-800/90 shadow-2xl shadow-indigo-950/40'
-const setupLabelClass = 'text-slate-300 font-medium text-xs'
-const setupLinkClass = 'text-indigo-400 hover:text-indigo-300 hover:underline'
+  'w-full max-w-3xl p-8 rounded-2xl bg-white/95 backdrop-blur-2xl border border-[#e6ecf8] shadow-[0_8px_24px_rgba(11,20,51,0.12)]'
+const setupLabelClass = 'text-[#5e6b8c] font-medium text-xs'
+const setupLinkClass = 'text-[#2457d6] hover:text-[#1a46b8] hover:underline'
 
 export default function SetupWizard() {
   const { t } = useLingui()
@@ -277,8 +277,8 @@ export default function SetupWizard() {
         <MainLayout>
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400" />
-              <p className="mt-4 text-slate-400">{t`Loading setup...`}</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#2457d6]" />
+              <p className="mt-4 text-[#5e6b8c]">{t`Loading setup...`}</p>
             </div>
           </div>
         </MainLayout>
@@ -294,14 +294,14 @@ export default function SetupWizard() {
             {setupComplete ? (
               <div className="space-y-6">
                 <div className="text-center">
-                  <div className="text-2xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] mb-4">
-                    Mail Studio<span className="text-indigo-500">.</span>
+                  <div className="text-2xl font-black tracking-tight text-[#0b1433] mb-4">
+                    Mail Studio<span className="text-[#2457d6]">.</span>
                   </div>
                   <CheckOutlined
-                    style={{ fontSize: '48px', color: '#34d399', marginBottom: '16px' }}
+                    style={{ fontSize: '48px', color: '#1d9a6c', marginBottom: '16px' }}
                   />
-                  <h2 className="text-3xl font-bold text-white mb-2">{t`Setup Complete!`}</h2>
-                  <p className="text-slate-400">
+                  <h2 className="text-3xl font-bold text-[#0b1433] mb-2">{t`Setup Complete!`}</h2>
+                  <p className="text-[#5e6b8c]">
                     {t`Your Mail Studio instance has been successfully configured.`}
                   </p>
                 </div>
@@ -324,10 +324,10 @@ export default function SetupWizard() {
             ) : (
               <div className="space-y-6">
                 <div className="text-center">
-                  <div className="text-2xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] mb-2">
-                    Mail Studio<span className="text-indigo-500">.</span>
+                  <div className="text-2xl font-black tracking-tight text-[#0b1433] mb-2">
+                    Mail Studio<span className="text-[#2457d6]">.</span>
                   </div>
-                  <h2 className="text-sm font-semibold text-slate-200 tracking-tight">{t`Setup`}</h2>
+                  <h2 className="text-sm font-semibold text-[#5e6b8c] tracking-tight">{t`Setup`}</h2>
                 </div>
 
                 <Form
@@ -397,7 +397,7 @@ export default function SetupWizard() {
                       </Divider>
 
                       <div className="text-center mb-4">
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-[#5e6b8c]">
                           {t`See docs for:`}
                           <a
                             href="https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html"
@@ -544,7 +544,7 @@ export default function SetupWizard() {
                       {
                         key: 'advanced',
                         label: (
-                          <span className="text-slate-300 font-medium">{t`Advanced Settings`}</span>
+                          <span className="text-[#5e6b8c] font-medium">{t`Advanced Settings`}</span>
                         ),
                         children: (
                           <>

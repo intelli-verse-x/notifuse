@@ -94,8 +94,8 @@ export const AddNodeButton: React.FC<AddNodeButtonProps> = ({
         const button = (
           <button
             key={item.key}
-            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-slate-200 ${
-              isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800 cursor-pointer'
+            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-[#0b1433] ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#f2f6ff] cursor-pointer'
             }`}
             onClick={() => {
               if (isDisabled) return

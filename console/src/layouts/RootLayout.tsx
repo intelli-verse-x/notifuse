@@ -91,16 +91,16 @@ export function RootLayout() {
           justifyContent: 'center',
           alignItems: 'center',
           height: '100vh',
-          backgroundColor: '#0b0f19',
+          backgroundColor: '#f7f9ff',
           gap: '20px'
         }}
       >
-        <div style={{ fontSize: '30px', fontWeight: 800, letterSpacing: '-0.03em', color: '#ffffff', textShadow: '0 0 20px rgba(99,102,241,0.6)' }}>
-          Mail Studio<span style={{ color: '#6366F1' }}>.</span>
+        <div style={{ fontSize: '30px', fontWeight: 800, letterSpacing: '-0.03em', color: '#0b1433' }}>
+          Mail Studio<span style={{ color: '#2457d6' }}>.</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
           <Spin size="large" />
-          <span style={{ color: '#94A3B8', fontSize: '14px', fontWeight: 500 }}>{t`Loading...`}</span>
+          <span style={{ color: '#5e6b8c', fontSize: '14px', fontWeight: 500 }}>{t`Loading...`}</span>
         </div>
       </div>
     )

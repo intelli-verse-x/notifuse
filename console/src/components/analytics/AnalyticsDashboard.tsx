@@ -127,7 +127,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`Total Contacts`}</span>
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+              <div className="w-9 h-9 rounded-xl bg-[#e8efff] text-[#2457d6] flex items-center justify-center border border-[#c7d2e8]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                   <circle cx="9" cy="7" r="4"/>
@@ -137,11 +137,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold text-white tracking-tight">
+              <div className="text-2xl font-bold text-[#0b1433] tracking-tight">
                 {formatStat(totalContacts as number, totalContactsLoading)}
               </div>
               <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
-                <span className="text-emerald-300 font-semibold bg-emerald-950/80 px-1.5 py-0.5 rounded text-[11px] border border-emerald-800/80">+100%</span>
+                <span className="text-[#1d9a6c] font-semibold bg-[#e3f6ee] px-1.5 py-0.5 rounded-full text-[11px] border border-[#b7e5d0]">+100%</span>
                 <span>audience database</span>
               </div>
             </div>
@@ -153,7 +153,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`New Contacts`}</span>
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <div className="w-9 h-9 rounded-xl bg-[#e3f6ee] text-[#1d9a6c] flex items-center justify-center border border-[#b7e5d0]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                   <circle cx="9" cy="7" r="4"/>
@@ -163,11 +163,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold text-white tracking-tight">
+              <div className="text-2xl font-bold text-[#0b1433] tracking-tight">
                 {formatStat(newContactsCount as number, newContactsLoading)}
               </div>
               <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
-                <span className="text-indigo-300 font-semibold bg-indigo-950/80 px-1.5 py-0.5 rounded text-[11px] border border-indigo-800/80">Range</span>
+                <span className="text-[#2457d6] font-semibold bg-[#e8efff] px-1.5 py-0.5 rounded text-[11px] border border-[#c7d2e8]">Range</span>
                 <span>in selected period</span>
               </div>
             </div>
@@ -179,7 +179,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`Transactional Provider`}</span>
-              <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center border border-violet-500/20">
+              <div className="w-9 h-9 rounded-xl bg-[#f0ebff] text-[#7a5bff] flex items-center justify-center border border-[#c9b8ff]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m22 2-7 20-4-9-9-4Z"/>
                   <path d="M22 2 11 13"/>
@@ -190,8 +190,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               {transactionalProvider ? (
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-sm">{transactionalProviderInfo?.name}</span>
-                    <span className="bg-emerald-950/80 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-semibold border border-emerald-800/80">
+                    <span className="font-bold text-[#0b1433] text-sm">{transactionalProviderInfo?.name}</span>
+                    <span className="bg-[#e3f6ee] text-[#1d9a6c] text-[10px] px-1.5 py-0.5 rounded-full font-semibold border border-[#b7e5d0]">
                       Active
                     </span>
                   </div>
@@ -218,7 +218,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <div className="mailstudio-card p-5 h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t`Marketing Provider`}</span>
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+              <div className="w-9 h-9 rounded-xl bg-[#fff1e5] text-[#e2701f] flex items-center justify-center border border-[#f0c49a]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m3 11 18-5v12L3 14v-3z"/>
                   <path d="M11.6 16.8 a3 3 0 1 1-5.8-1.6"/>
@@ -229,8 +229,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               {marketingProvider ? (
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-sm">{marketingProviderInfo?.name}</span>
-                    <span className="bg-emerald-950/80 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-semibold border border-emerald-800/80">
+                    <span className="font-bold text-[#0b1433] text-sm">{marketingProviderInfo?.name}</span>
+                    <span className="bg-[#e3f6ee] text-[#1d9a6c] text-[10px] px-1.5 py-0.5 rounded-full font-semibold border border-[#b7e5d0]">
                       Active
                     </span>
                   </div>

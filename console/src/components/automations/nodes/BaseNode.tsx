@@ -43,7 +43,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
             okButtonProps={{ danger: true }}
           >
             <Tooltip title={t`Delete node`} placement="right">
-              <button className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 hover:bg-red-950 shadow-md border border-white/15 cursor-pointer transition-transform hover:scale-110">
+              <button className="flex items-center justify-center w-6 h-6 rounded-full bg-white hover:bg-red-50 shadow-md border border-[#c7d2e8] cursor-pointer transition-transform hover:scale-110">
                 <Trash2 size={14} className="text-slate-400 hover:text-red-400" />
               </button>
             </Tooltip>
@@ -51,16 +51,16 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
         </div>
       )}
       <div
-        className="automation-node bg-slate-900 rounded text-slate-100"
+        className="automation-node bg-white rounded text-[#0b1433] border border-[#e6ecf8]"
         style={{
           padding: '8px 12px',
           minWidth: '300px',
-          border: selected ? '1px solid #7763F1' : isOrphan ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.12)',
+          border: selected ? '1px solid #2457d6' : isOrphan ? '1px solid #f97316' : '1px solid #c7d2e8',
           boxShadow: selected ? '0 4px 12px rgba(119,99,241,0.3)' : 'none'
         }}
       >
         <div className="flex items-center gap-1.5">
-          <span style={{ color: selected ? '#7763F1' : '#94a3b8' }}>{icon}</span>
+          <span style={{ color: selected ? '#2457d6' : '#94a3b8' }}>{icon}</span>
           <span style={{ fontSize: '16px', fontWeight: 500 }}>{label}</span>
         </div>
         {children && <div style={{ fontSize: '14px', color: '#94a3b8', marginTop: '8px' }}>{children}</div>}

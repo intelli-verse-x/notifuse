@@ -92,16 +92,16 @@ export function BlogSidebar({
   const selectedKey = activeCategoryId || 'all'
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} className="bg-slate-900/40 text-slate-100">
-      <div className="text-xl font-semibold pt-6 pl-6 text-white">{t`Categories`}</div>
-      <Divider className="!my-4 border-slate-800/80" />
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} className="bg-white text-[#0b1433]">
+      <div className="text-xl font-semibold pt-6 pl-6 text-[#0b1433]">{t`Categories`}</div>
+      <Divider className="!my-4 border-[#e6ecf8]" />
       <Menu
         mode="inline"
         selectedKeys={[selectedKey]}
         items={menuItems}
         onClick={({ key }) => onCategoryChange(key === 'all' ? null : key)}
         style={{ borderRight: 0, backgroundColor: 'transparent' }}
-        theme="dark"
+        theme="light"
       />
       <Divider className="!my-4" />
       <div className="px-6 pb-6">

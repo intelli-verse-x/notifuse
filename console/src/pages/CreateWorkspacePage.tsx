@@ -101,18 +101,18 @@ export function CreateWorkspacePage() {
   return (
     <MainLayout>
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4 sm:p-6">
-        <div className="w-full max-w-lg p-6 sm:p-8 rounded-2xl bg-slate-900/85 backdrop-blur-2xl border border-slate-800/90 shadow-2xl shadow-indigo-950/40">
-          <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-800/80">
+        <div className="w-full max-w-lg p-6 sm:p-8 rounded-2xl bg-white/95 backdrop-blur-2xl border border-[#e6ecf8] shadow-[0_8px_24px_rgba(11,20,51,0.12)]">
+          <div className="flex items-center justify-between pb-6 mb-6 border-b border-[#e6ecf8]">
             <div className="flex items-center gap-3">
               <Button
                 type="text"
-                icon={<ArrowLeftOutlined className="text-slate-400" />}
+                icon={<ArrowLeftOutlined className="text-[#5e6b8c]" />}
                 onClick={handleBackToDashboard}
-                className="hover:bg-slate-800 text-slate-300"
+                className="hover:bg-[#f2f6ff] text-[#5e6b8c]"
               />
               <div>
-                <h2 className="text-lg font-bold text-white tracking-tight leading-tight m-0">{t`New Workspace`}</h2>
-                <p className="text-xs text-slate-400 m-0">{t`Set up a new workspace for your team`}</p>
+                <h2 className="text-lg font-bold text-[#0b1433] tracking-tight leading-tight m-0">{t`New Workspace`}</h2>
+                <p className="text-xs text-[#5e6b8c] m-0">{t`Set up a new workspace for your team`}</p>
               </div>
             </div>
           </div>
@@ -127,7 +127,7 @@ export function CreateWorkspacePage() {
             size="large"
           >
             <Form.Item
-              label={<span className="text-slate-300 font-medium text-xs">{t`Workspace Name`}</span>}
+              label={<span className="text-[#5e6b8c] font-medium text-xs">{t`Workspace Name`}</span>}
               name="name"
               rules={[
                 { required: true, message: t`Please enter a workspace name` },
@@ -139,10 +139,10 @@ export function CreateWorkspacePage() {
 
             <Form.Item
               label={
-                <span className="text-slate-300 font-medium text-xs">
+                <span className="text-[#5e6b8c] font-medium text-xs">
                   {t`Workspace ID`}&nbsp;
                   <Tooltip title={t`This ID will be used in URLs and API requests. It can only contain lowercase letters and numbers.`}>
-                    <InfoCircleOutlined className="text-slate-400" />
+                    <InfoCircleOutlined className="text-[#8590ad]" />
                   </Tooltip>
                 </span>
               }
@@ -160,14 +160,14 @@ export function CreateWorkspacePage() {
                 className="rounded-lg"
                 suffix={
                   <Tooltip title={t`ID is automatically generated but can be modified if needed`}>
-                    <InfoCircleOutlined style={{ color: 'rgba(255,255,255,.45)' }} />
+                    <InfoCircleOutlined style={{ color: '#8590ad' }} />
                   </Tooltip>
                 }
               />
             </Form.Item>
 
             <Form.Item
-              label={<span className="text-slate-300 font-medium text-xs">{t`Website URL`}</span>}
+              label={<span className="text-[#5e6b8c] font-medium text-xs">{t`Website URL`}</span>}
               name="website_url"
               rules={[
                 {
@@ -176,7 +176,7 @@ export function CreateWorkspacePage() {
                   validateTrigger: 'onBlur'
                 }
               ]}
-              extra={<span className="text-xs text-slate-400">{t`We'll automatically detect and use your website's favicon`}</span>}
+              extra={<span className="text-xs text-[#8590ad]">{t`We'll automatically detect and use your website's favicon`}</span>}
             >
               <Input placeholder="https://example.com" className="rounded-lg" />
             </Form.Item>
@@ -188,7 +188,7 @@ export function CreateWorkspacePage() {
                 loading={loading}
                 block
                 size="large"
-                className="font-semibold shadow-lg shadow-indigo-500/20"
+                className="font-semibold"
               >
                 {t`Create Workspace`}
               </Button>

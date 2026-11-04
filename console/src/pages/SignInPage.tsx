@@ -129,13 +129,13 @@ export function SignInPage() {
   return (
     <MainLayout>
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
-        <div className="w-full max-w-md p-8 rounded-2xl bg-slate-900/80 backdrop-blur-2xl border border-slate-800/90 shadow-2xl shadow-indigo-950/40">
+        <div className="w-full max-w-md p-8 rounded-2xl bg-white backdrop-blur-2xl border border-[#e6ecf8] shadow-2xl shadow-[0_8px_24px_rgba(11,20,51,0.12)]">
           <div className="flex flex-col items-center mb-6 text-center">
-            <div className="text-2xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] mb-2">
-              Mail Studio<span className="text-indigo-500">.</span>
+            <div className="text-2xl font-black tracking-tight text-[#0b1433] mb-2">
+              Mail Studio<span className="text-[#2457d6]">.</span>
             </div>
-            <h2 className="text-sm font-semibold text-slate-200 tracking-tight">{t`Sign In`}</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{t`Welcome back to Mail Studio`}</p>
+            <h2 className="text-sm font-semibold text-[#0b1433] tracking-tight">{t`Sign In`}</h2>
+            <p className="text-xs text-[#5e6b8c] mt-0.5">{t`Welcome back to Mail Studio`}</p>
           </div>
 
           {!showCodeInput ? (
@@ -148,7 +148,7 @@ export function SignInPage() {
               size="large"
             >
               <Form.Item
-                label={<span className="text-slate-300 font-medium text-xs">{t`Email Address`}</span>}
+                label={<span className="text-[#5e6b8c] font-medium text-xs">{t`Email Address`}</span>}
                 name="email"
                 rules={[
                   { required: true, message: t`Please input your email!` },
@@ -165,7 +165,7 @@ export function SignInPage() {
                   block
                   loading={loading}
                   size="large"
-                  className="font-semibold shadow-lg shadow-indigo-500/20"
+                  className="font-semibold shadow-lg shadow-[0_8px_24px_rgba(11,20,51,0.12)]"
                 >
                   {t`Send Magic Code`}
                 </Button>
@@ -173,9 +173,9 @@ export function SignInPage() {
             </Form>
           ) : (
             <>
-              <p className="text-sm text-slate-300 mb-6 text-center">
+              <p className="text-sm text-[#5e6b8c] mb-6 text-center">
                 {t`Enter the 6-digit code sent to`}{' '}
-                <span className="font-semibold text-indigo-400">{email}</span>
+                <span className="font-semibold text-[#2457d6]">{email}</span>
               </p>
               <Form name="code" onFinish={handleCodeSubmit} layout="vertical" size="large">
                 <Form.Item
@@ -202,7 +202,7 @@ export function SignInPage() {
                     block
                     loading={loading}
                     size="large"
-                    className="font-semibold shadow-lg shadow-indigo-500/20"
+                    className="font-semibold shadow-lg shadow-[0_8px_24px_rgba(11,20,51,0.12)]"
                   >
                     {t`Verify Code`}
                   </Button>
@@ -213,7 +213,7 @@ export function SignInPage() {
                     type="link"
                     onClick={() => setShowCodeInput(false)}
                     style={{ padding: 0 }}
-                    className="text-xs text-slate-400 hover:text-indigo-300"
+                    className="text-xs text-[#8590ad] hover:text-[#2457d6]"
                   >
                     {t`Use a different email`}
                   </Button>
@@ -222,7 +222,7 @@ export function SignInPage() {
                     onClick={handleResendCode}
                     loading={resendLoading}
                     style={{ padding: 0 }}
-                    className="text-xs text-slate-400 hover:text-indigo-300"
+                    className="text-xs text-[#8590ad] hover:text-[#2457d6]"
                   >
                     {t`Resend code`}
                   </Button>

@@ -251,7 +251,7 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSe
       {workspace?.settings.blog_enabled && workspace?.settings.custom_endpoint_url && (
         <>
           <RecentThemesTable workspaceId={workspace.id} workspace={workspace} />
-          <Divider className="!my-12 border-slate-800/80" />
+          <Divider className="!my-12 border-[#e6ecf8]" />
         </>
       )}
 
@@ -264,10 +264,10 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSe
         {/* Show enable button only when blog is disabled */}
         {!workspace?.settings.blog_enabled && (
           <div className="mailstudio-card p-6 mb-6">
-            <h3 className="text-base font-bold text-white mb-2">{t`Enable Blog`}</h3>
+            <h3 className="text-base font-bold text-[#0b1433] mb-2">{t`Enable Blog`}</h3>
             <p className="text-sm text-slate-400 mb-4 leading-relaxed">
               {t`Enable the blog feature to publish articles and content on your custom domain homepage. Your blog will be accessible at`}{' '}
-              <strong className="text-indigo-300">
+              <strong className="text-[#2457d6]">
                 {workspace?.settings.custom_endpoint_url || 'your-custom-domain.com'}/
               </strong>
             </p>
@@ -437,7 +437,7 @@ export function BlogSettings({ workspace, onWorkspaceUpdate, canManage }: BlogSe
       {/* Danger Zone - Show when blog is enabled */}
       {workspace?.settings.blog_enabled && (
         <>
-          <Divider className="!my-12 border-slate-800/80" />
+          <Divider className="!my-12 border-[#e6ecf8]" />
           <div className="p-6 rounded-xl border border-red-900/60 bg-red-950/30 mt-8">
             <h3 className="text-red-400 font-bold text-base mb-2">{t`Danger Zone`}</h3>
             <p className="text-sm text-slate-400 mb-4">

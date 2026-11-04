@@ -22,6 +22,8 @@ export function SsoPage() {
   const token = typeof search.token === 'string' ? search.token.trim() : ''
   const workspaceId =
     typeof search.workspaceId === 'string' ? search.workspaceId.trim() : ''
+  const template =
+    typeof search.template === 'string' ? search.template.trim() : ''
 
   useEffect(() => {
     if (started.current) return
@@ -37,6 +39,14 @@ export function SsoPage() {
         await signin(token)
         message.success(t`Signed in`)
         setTimeout(() => {
+          if (workspaceId && template) {
+            navigate({
+              to: '/console/workspace/$workspaceId/templates',
+              params: { workspaceId },
+              search: { id: template }
+            })
+            return
+          }
           if (workspaceId) {
             navigate({
               to: '/console/workspace/$workspaceId',
@@ -54,7 +64,7 @@ export function SsoPage() {
     }
 
     void run()
-  }, [token, workspaceId, signin, navigate, message, t])
+  }, [token, workspaceId, template, signin, navigate, message, t])
 
   return (
     <MainLayout>

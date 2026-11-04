@@ -73,23 +73,23 @@ export function AnalyticsPage() {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      {/* Mail Studio Dark Dashboard Hero Banner */}
-      <div className="mailstudio-glass-hero p-4 sm:p-6 rounded-2xl border border-indigo-500/20 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Mail Studio light dashboard hero */}
+      <div className="mailstudio-glass-hero p-4 sm:p-6 rounded-2xl border border-[#e6ecf8] shadow-[0_8px_24px_rgba(11,20,51,0.08)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight m-0">{t`Dashboard`}</h1>
-            <span className="bg-indigo-500/20 text-indigo-300 text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full font-semibold border border-indigo-500/30">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#0b1433] tracking-tight m-0">{t`Dashboard`}</h1>
+            <span className="bg-[#e8efff] text-[#2457d6] text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full font-semibold border border-[#c7d2e8]">
               Live Monitor
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 mb-0">
+          <p className="text-xs sm:text-sm text-[#5e6b8c] mt-1 mb-0">
             {t`Real-time dispatch performance, audience metrics, and email provider health.`}
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
-          <div className="flex items-center justify-between sm:justify-start gap-2 bg-slate-800/80 backdrop-blur-sm p-1 rounded-xl border border-slate-700/80 shadow-inner">
-            <span className="text-xs text-slate-400 font-medium pl-2.5">{t`TZ:`}</span>
+          <div className="flex items-center justify-between sm:justify-start gap-2 bg-white backdrop-blur-sm p-1 rounded-xl border border-[#e6ecf8] shadow-sm">
+            <span className="text-xs text-[#5e6b8c] font-medium pl-2.5">{t`TZ:`}</span>
             <Select
               value={selectedTimezone}
               onChange={handleTimezoneChange}
@@ -98,7 +98,7 @@ export function AnalyticsPage() {
               variant="borderless"
               style={{ width: 145 }}
               placeholder={t`Select timezone`}
-              className="text-xs font-medium text-slate-200"
+              className="text-xs font-medium text-[#0b1433]"
               showSearch
               filterOption={(input, option) =>
                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
@@ -106,7 +106,7 @@ export function AnalyticsPage() {
             />
           </div>
 
-          <div className="bg-slate-800/80 backdrop-blur-sm p-1 rounded-xl border border-slate-700/80 shadow-inner flex justify-center">
+          <div className="bg-white backdrop-blur-sm p-1 rounded-xl border border-[#e6ecf8] shadow-sm flex justify-center">
             <Segmented
               value={selectedPeriod}
               onChange={handlePeriodChange}

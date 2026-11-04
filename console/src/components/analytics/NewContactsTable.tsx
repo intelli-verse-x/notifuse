@@ -69,10 +69,10 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
       key: 'email',
       render: (email: string) => (
         <div className="flex items-center">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center mr-2.5 shadow-md shadow-indigo-500/20">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#2457d6] to-[#7a5bff] text-white font-bold text-xs flex items-center justify-center mr-2.5 shadow-md shadow-[0_6px_18px_rgba(122,91,255,0.32)]">
             {(email || 'U').substring(0, 1).toUpperCase()}
           </div>
-          <span className="text-xs font-semibold text-slate-200">{email}</span>
+          <span className="text-xs font-semibold text-[#0b1433]">{email}</span>
         </div>
       )
     },
@@ -204,14 +204,14 @@ export const NewContactsTable: React.FC<NewContactsTableProps> = ({ workspace })
 
   return (
     <div className="mailstudio-card p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-[#e6ecf8]">
         <div>
-          <h2 className="text-sm sm:text-base font-bold text-white tracking-tight m-0">{t`Recent New Contacts`}</h2>
+          <h2 className="text-sm sm:text-base font-bold text-[#0b1433] tracking-tight m-0">{t`Recent New Contacts`}</h2>
           <p className="text-xs text-slate-400 mt-0.5 mb-0">{t`Latest subscribers and contacts joined`}</p>
         </div>
         <button
           onClick={handleViewMore}
-          className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
+          className="text-xs font-semibold text-[#2457d6] hover:text-[#7a5bff] hover:underline cursor-pointer"
         >
           {t`View all contacts →`}
         </button>

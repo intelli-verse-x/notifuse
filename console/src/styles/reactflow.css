@@ -5,28 +5,28 @@
   font-family: inherit;
 }
 
-/* Selection highlight */
+/* Selection highlight — Admin sky blue */
 .react-flow__node.selected .automation-node {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+  border-color: #2457d6;
+  box-shadow: 0 0 0 2px rgba(36, 87, 214, 0.25);
 }
 
 /* Custom edge styles */
 .react-flow__edge-path {
-  stroke: #64748b;
+  stroke: #8590ad;
   stroke-width: 2;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #6366f1;
+  stroke: #2457d6;
 }
 
 /* Handle styles */
 .react-flow__handle {
   width: 10px;
   height: 10px;
-  background-color: #6366f1;
-  border: 2px solid #0f172a;
+  background-color: #2457d6;
+  border: 2px solid #ffffff;
   transition: all 0.15s ease;
 }
 
@@ -46,25 +46,25 @@
 
 /* Background */
 .react-flow__background {
-  background-color: #020617;
+  background-color: #f7f9ff;
 }
 
 /* Controls */
 .react-flow__controls {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(11, 20, 51, 0.08);
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #e6ecf8;
 }
 
 .react-flow__controls-button {
-  background: #111827 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  fill: #cbd5e1 !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e6ecf8 !important;
+  fill: #5e6b8c !important;
 }
 
 .react-flow__controls-button:hover {
-  background: #1e293b !important;
+  background: #f2f6ff !important;
 }
 
 .react-flow__controls-button:last-child {
@@ -72,16 +72,17 @@
 }
 
 .react-flow__minimap {
-  background-color: #0f172a !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e6ecf8 !important;
 }
 
 /* Add node button on edges */
 .add-node-button {
-  background-color: var(--primary);
+  background-color: #2457d6;
   transition: background-color 0.2s ease;
   cursor: pointer !important;
 }
 
 .add-node-button:hover {
-  background-color: #6354d1;
+  background-color: #7a5bff;
 }

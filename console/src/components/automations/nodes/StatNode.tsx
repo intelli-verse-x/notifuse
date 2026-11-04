@@ -80,7 +80,7 @@ export const StatNode: React.FC<StatNodeProps> = ({ data }) => {
         style={{ background: color, width: 8, height: 8 }}
       />
       <div
-        className="bg-slate-900 rounded shadow-sm"
+        className="bg-white border border-[#e6ecf8] rounded shadow-sm"
         style={{
           width: '220px',
           border: `1px solid ${color}30`,
@@ -93,11 +93,11 @@ export const StatNode: React.FC<StatNodeProps> = ({ data }) => {
           style={{ borderBottom: `1px solid ${color}20` }}
         >
           <span style={{ color }}>{icon}</span>
-          <span className="text-sm font-medium text-slate-100 truncate">{nodeLabel}</span>
+          <span className="text-sm font-medium text-[#0b1433] truncate">{nodeLabel}</span>
         </div>
 
         {/* Stats */}
-        <div className="px-3 py-2 bg-slate-800/60">
+        <div className="px-3 py-2 bg-[#f2f6ff]">
           <div className="flex items-center justify-between">
             <Statistic
               title={t`Inflight`}
@@ -145,7 +145,7 @@ export const FilterStatNode: React.FC<StatNodeProps> = ({ data }) => {
         style={{ background: color, width: 8, height: 8 }}
       />
       <div
-        className="bg-slate-900 rounded shadow-sm"
+        className="bg-white border border-[#e6ecf8] rounded shadow-sm"
         style={{
           width: '220px',
           border: `1px solid ${color}30`,
@@ -158,11 +158,11 @@ export const FilterStatNode: React.FC<StatNodeProps> = ({ data }) => {
           style={{ borderBottom: `1px solid ${color}20` }}
         >
           <span style={{ color }}><Filter size={16} /></span>
-          <span className="text-sm font-medium text-slate-100">{t`Filter`}</span>
+          <span className="text-sm font-medium text-[#0b1433]">{t`Filter`}</span>
         </div>
 
         {/* Stats */}
-        <div className="px-3 py-2 bg-slate-800/60">
+        <div className="px-3 py-2 bg-[#f2f6ff]">
           <div className="flex items-center justify-between">
             <Statistic
               title={t`Inflight`}
@@ -227,7 +227,7 @@ export const ABTestStatNode: React.FC<StatNodeProps> = ({ data }) => {
         style={{ background: color, width: 8, height: 8 }}
       />
       <div
-        className="bg-slate-900 rounded shadow-sm"
+        className="bg-white border border-[#e6ecf8] rounded shadow-sm"
         style={{
           width: '220px',
           border: `1px solid ${color}30`,
@@ -240,11 +240,11 @@ export const ABTestStatNode: React.FC<StatNodeProps> = ({ data }) => {
           style={{ borderBottom: `1px solid ${color}20` }}
         >
           <span style={{ color }}><FlaskConical size={16} /></span>
-          <span className="text-sm font-medium text-slate-100">{t`A/B Test`}</span>
+          <span className="text-sm font-medium text-[#0b1433]">{t`A/B Test`}</span>
         </div>
 
         {/* Stats */}
-        <div className="px-3 py-2 bg-slate-800/60">
+        <div className="px-3 py-2 bg-[#f2f6ff]">
           <div className="flex items-center justify-between">
             <Statistic
               title={t`Inflight`}

@@ -41,8 +41,8 @@ export function OptionSelector<T = string>({
               p-3 rounded-lg border transition-all
               ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
               ${isSelected
-                ? 'border-primary bg-primary/15 text-slate-100'
-                : 'border-white/10 hover:border-white/25 bg-slate-800/40 text-slate-200'
+                ? 'border-primary bg-primary/15 text-[#0b1433]'
+                : 'border-[#e6ecf8] hover:border-[#c7d2e8] bg-[#f2f6ff] text-[#0b1433]'
               }
             `}
           >

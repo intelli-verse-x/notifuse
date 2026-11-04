@@ -25,7 +25,7 @@ export function LogsPage() {
       {/* Delivery log header strip */}
       <div className="mailstudio-card px-5 py-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+          <h1 className="text-2xl font-semibold text-[#0b1433] m-0 tracking-tight">
             {t`Delivery log`}
           </h1>
           <p className="mt-1 mb-0 text-sm text-slate-400">

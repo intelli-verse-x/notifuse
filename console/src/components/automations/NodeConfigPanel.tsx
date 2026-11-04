@@ -138,15 +138,15 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   }
 
   return (
-    <div className="bg-slate-900 h-full flex flex-col text-slate-200">
-      <div className="p-3 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-        <Title level={5} style={{ margin: 0, fontSize: '14px', color: '#F8FAFC' }}>
+    <div className="bg-white h-full flex flex-col text-[#0b1433]">
+      <div className="p-3 border-b border-[#e6ecf8] flex items-center justify-between flex-shrink-0">
+        <Title level={5} style={{ margin: 0, fontSize: '14px', color: '#0b1433' }}>
           {t`Configure`} {selectedNode.data.label}
         </Title>
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 cursor-pointer"
+            className="p-1 hover:bg-[#f2f6ff] rounded text-[#8590ad] hover:text-[#0b1433] cursor-pointer"
           >
             <X size={16} />
           </button>

@@ -68,7 +68,7 @@ export const AutomationEdge: React.FC<EdgeProps<AutomationEdgeData>> = ({
               {data?.onDelete && (
                 <Tooltip title={t`Delete edge`} placement="right">
                   <button
-                    className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 hover:bg-red-950 shadow-md border border-white/15 cursor-pointer transition-transform hover:scale-110"
+                    className="flex items-center justify-center w-6 h-6 rounded-full bg-white hover:bg-red-50 shadow-md border border-[#c7d2e8] cursor-pointer transition-transform hover:scale-110"
                     onClick={() => data.onDelete?.()}
                   >
                     <X size={14} className="text-slate-400 hover:text-red-400" />

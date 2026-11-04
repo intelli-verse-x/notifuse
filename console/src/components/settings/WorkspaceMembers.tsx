@@ -513,11 +513,11 @@ export function WorkspaceMembers({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+              <h1 className="text-2xl font-semibold text-[#0b1433] m-0 tracking-tight">
                 {t`Team`}
               </h1>
               {!loading && (
-                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                <span className="inline-flex items-center rounded-md border border-[#c7d2e8] bg-[#e8efff] px-2.5 py-0.5 text-xs font-medium text-[#2457d6]">
                   {members.length}
                 </span>
               )}
@@ -543,13 +543,13 @@ export function WorkspaceMembers({
         </div>
       ) : members.length === 0 ? (
         <div className="mailstudio-card px-6 py-14 text-center">
-          <h2 className="text-lg font-semibold text-slate-100 m-0">{t`No members yet`}</h2>
+          <h2 className="text-lg font-semibold text-[#0b1433] m-0">{t`No members yet`}</h2>
           <p className="mt-2 mb-0 text-sm text-slate-400">
             {t`Invite teammates or create an API key to get started.`}
           </p>
         </div>
       ) : (
-        <div className="mailstudio-card overflow-hidden border border-white/10">
+        <div className="mailstudio-card overflow-hidden border border-[#e6ecf8]">
           <Table
             dataSource={members}
             columns={columns}
@@ -593,7 +593,7 @@ export function WorkspaceMembers({
               columns={invitePermissionsColumns}
               pagination={false}
               size="small"
-              className="border border-slate-800 rounded-md"
+              className="border border-[#e6ecf8] rounded-md"
             />
           </Form.Item>
         </Form>

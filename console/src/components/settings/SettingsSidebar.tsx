@@ -126,22 +126,22 @@ export function SettingsSidebar({ activeSection, onSectionChange, isOwner }: Set
   return (
     <div
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-      className="bg-slate-950/40 text-slate-100"
+      className="bg-white text-[#0b1433]"
     >
       <div className="px-5 pt-6 pb-2">
-        <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <div className="text-xs font-semibold uppercase tracking-wider text-[#8590ad]">
           {t`Workspace`}
         </div>
-        <div className="mt-1 text-lg font-semibold text-slate-100 tracking-tight">{t`Settings`}</div>
+        <div className="mt-1 text-lg font-semibold text-[#0b1433] tracking-tight">{t`Settings`}</div>
       </div>
-      <Divider className="!my-3 border-white/10" />
+      <Divider className="!my-3 border-[#e6ecf8]" />
       <Menu
         mode="inline"
         selectedKeys={[activeSection]}
         items={menuItems}
         onClick={({ key }) => onSectionChange(key as SettingsSection)}
         style={{ borderRight: 0, backgroundColor: 'transparent' }}
-        theme="dark"
+        theme="light"
         className="px-2"
       />
     </div>

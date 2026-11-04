@@ -436,7 +436,7 @@ export function MessageHistoryTable({
         rowKey="id"
         pagination={false}
         size={size}
-        className={bordered ? 'border border-white/10 rounded overflow-hidden' : ''}
+        className={bordered ? 'border border-[#e6ecf8] rounded overflow-hidden' : ''}
       />
 
       {nextCursor && (

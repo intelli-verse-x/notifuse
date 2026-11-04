@@ -19,7 +19,7 @@ const antdLocales: Record<Locale, AntdLocale> = {
   fr: frFR,
   es: esES,
   de: deDE,
-  ca: caES,
+  ca: caES
 }
 
 const queryClient = new QueryClient({
@@ -31,93 +31,125 @@ const queryClient = new QueryClient({
   }
 })
 
+/** Admin Dashboard sky tokens — light theme only (matches IntelliVerse Admin Console). */
 const theme: ThemeConfig = {
-  algorithm: antTheme.darkAlgorithm,
+  algorithm: antTheme.defaultAlgorithm,
   token: {
-    colorPrimary: '#6366F1',
-    colorLink: '#818CF8',
-    colorBgLayout: '#0B0F19',
-    colorBgContainer: '#111827',
-    colorBgElevated: '#1E293B',
-    colorTextHeading: '#F8FAFC',
-    colorText: '#CBD5E1',
-    colorTextSecondary: '#94A3B8',
-    colorBorder: 'rgba(255, 255, 255, 0.08)',
-    colorBorderSecondary: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 10,
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    colorPrimary: '#2457d6',
+    colorLink: '#2457d6',
+    colorInfo: '#2457d6',
+    colorSuccess: '#1d9a6c',
+    colorWarning: '#e2701f',
+    colorError: '#c2410c',
+    colorBgLayout: '#f7f9ff',
+    colorBgContainer: '#ffffff',
+    colorBgElevated: '#ffffff',
+    colorTextHeading: '#0b1433',
+    colorText: '#0b1433',
+    colorTextSecondary: '#5e6b8c',
+    colorTextTertiary: '#8590ad',
+    colorBorder: '#c7d2e8',
+    colorBorderSecondary: '#e6ecf8',
+    colorFillSecondary: '#f2f6ff',
+    colorFillTertiary: '#f2f6ff',
+    borderRadius: 12,
+    borderRadiusLG: 16,
+    borderRadiusSM: 10,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: 15,
+    controlHeight: 40,
+    boxShadow: '0 2px 8px rgba(11, 20, 51, 0.08)',
+    boxShadowSecondary: '0 8px 24px rgba(11, 20, 51, 0.12)'
   },
   components: {
     Layout: {
-      bodyBg: '#0B0F19',
-      lightSiderBg: '#0F172A',
-      siderBg: '#0F172A',
-      headerBg: '#0F172A'
+      bodyBg: '#f7f9ff',
+      lightSiderBg: '#ffffff',
+      siderBg: '#ffffff',
+      headerBg: '#ffffff',
+      triggerBg: '#f2f6ff',
+      triggerColor: '#5e6b8c'
     },
     Card: {
       headerFontSize: 15,
-      borderRadius: 12,
-      borderRadiusLG: 12,
-      borderRadiusSM: 10,
-      colorBorderSecondary: 'rgba(255, 255, 255, 0.08)',
-      colorBgContainer: '#111827'
+      borderRadius: 16,
+      borderRadiusLG: 16,
+      borderRadiusSM: 12,
+      colorBorderSecondary: '#e6ecf8',
+      colorBgContainer: '#ffffff'
     },
     Table: {
-      headerBg: '#1E293B',
+      headerBg: '#f2f6ff',
       fontSize: 13,
-      colorTextHeading: '#94A3B8',
-      colorBgContainer: '#111827',
-      rowHoverBg: '#1E293B',
-      fixedHeaderBG: '#1E293B'
+      colorTextHeading: '#5e6b8c',
+      colorBgContainer: '#ffffff',
+      rowHoverBg: '#f2f6ff',
+      fixedHeaderBG: '#f2f6ff',
+      borderColor: '#e6ecf8'
     },
     Menu: {
       colorBgContainer: 'transparent',
       subMenuItemBg: 'transparent',
       itemBg: 'transparent',
-      darkItemBg: 'transparent',
-      darkSubMenuItemBg: 'transparent',
-      itemColor: '#94A3B8',
-      itemHoverColor: '#F8FAFC',
-      itemSelectedColor: '#FFFFFF',
-      itemSelectedBg: '#334155',
-      darkItemSelectedBg: '#334155'
+      itemColor: '#5e6b8c',
+      itemHoverColor: '#0b1433',
+      itemHoverBg: '#f2f6ff',
+      itemSelectedColor: '#2457d6',
+      itemSelectedBg: '#e8efff',
+      itemActiveBg: '#e8efff'
     },
     Button: {
-      borderRadius: 8,
-      fontWeight: 500
+      borderRadius: 999,
+      fontWeight: 600,
+      primaryShadow: '0 6px 18px rgba(122, 91, 255, 0.32)',
+      defaultBorderColor: '#c7d2e8',
+      defaultColor: '#0b1433'
     },
     Segmented: {
-      trackBg: '#1E293B',
-      itemSelectedBg: '#334155',
-      itemSelectedColor: '#F8FAFC',
-      itemColor: '#94A3B8',
-      borderRadius: 8
+      trackBg: '#f2f6ff',
+      itemSelectedBg: '#ffffff',
+      itemSelectedColor: '#0b1433',
+      itemColor: '#5e6b8c',
+      borderRadius: 999
     },
     Drawer: {
-      colorBgElevated: '#111827'
+      colorBgElevated: '#ffffff'
     },
     Modal: {
-      colorBgElevated: '#111827'
+      colorBgElevated: '#ffffff',
+      borderRadiusLG: 20
     },
     Timeline: {
-      dotBg: '#111827'
+      dotBg: '#ffffff'
     },
     Input: {
-      colorBgContainer: '#111827',
-      colorBorder: 'rgba(255, 255, 255, 0.12)',
-      activeBorderColor: '#6366F1',
-      hoverBorderColor: 'rgba(255, 255, 255, 0.2)',
-      colorText: '#F8FAFC',
-      colorTextPlaceholder: '#64748B'
+      colorBgContainer: '#ffffff',
+      colorBorder: '#c7d2e8',
+      activeBorderColor: '#2457d6',
+      hoverBorderColor: '#7a5bff',
+      colorText: '#0b1433',
+      colorTextPlaceholder: '#8590ad',
+      borderRadius: 12,
+      activeShadow: '0 0 0 3px rgba(36, 87, 214, 0.12)'
     },
     Select: {
-      colorBgContainer: '#111827',
-      colorBorder: 'rgba(255, 255, 255, 0.12)',
-      optionSelectedBg: '#334155'
+      colorBgContainer: '#ffffff',
+      colorBorder: '#c7d2e8',
+      optionSelectedBg: '#e8efff',
+      borderRadius: 12
     },
     Descriptions: {
-      colorTextSecondary: '#94A3B8',
+      colorTextSecondary: '#5e6b8c',
       labelBg: 'transparent'
+    },
+    Tabs: {
+      itemColor: '#5e6b8c',
+      itemSelectedColor: '#2457d6',
+      itemHoverColor: '#0b1433',
+      inkBarColor: '#2457d6'
+    },
+    Tag: {
+      borderRadiusSM: 999
     }
   }
 }

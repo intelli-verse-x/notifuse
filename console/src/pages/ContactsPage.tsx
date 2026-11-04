@@ -987,11 +987,11 @@ export function ContactsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-semibold text-slate-100 m-0 tracking-tight">
+              <h1 className="text-2xl font-semibold text-[#0b1433] m-0 tracking-tight">
                 {t`Audience`}
               </h1>
               {totalContactsData?.total_contacts !== undefined && (
-                <span className="inline-flex items-center rounded-md border border-indigo-400/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-200">
+                <span className="inline-flex items-center rounded-md border border-[#c7d2e8] bg-[#e8efff] px-2.5 py-0.5 text-xs font-medium text-[#2457d6]">
                   {numbro(totalContactsData.total_contacts).format({
                     thousandSeparated: true,
                     mantissa: 0
@@ -1070,7 +1070,7 @@ export function ContactsPage() {
       </div>
 
       {/* Filters + segments control deck */}
-      <div className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 space-y-3">
+      <div className="rounded-xl border border-[#e6ecf8] bg-white px-4 py-3 space-y-3">
         <div className="flex items-start gap-3 flex-wrap">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 pt-1.5 shrink-0">
             {t`Filters`}
@@ -1079,7 +1079,7 @@ export function ContactsPage() {
             <Filter fields={filterFields} activeFilters={activeFilters} />
           </div>
         </div>
-        <div className="border-t border-white/5 pt-3">
+        <div className="border-t border-[#e6ecf8] pt-3">
           <SegmentsFilter
             workspaceId={workspaceId}
             segments={segmentsData?.segments || []}
@@ -1120,7 +1120,7 @@ export function ContactsPage() {
       />
 
       {/* Audience table */}
-      <div className="mailstudio-card overflow-hidden border border-white/10">
+      <div className="mailstudio-card overflow-hidden">
         <Table
           columns={columns}
           dataSource={contacts}

@@ -188,7 +188,7 @@ export function WorkspaceSettingsPage() {
         width={240}
         className="!bg-transparent"
         style={{
-          borderRight: '1px solid rgba(255,255,255,0.08)',
+          borderRight: '1px solid #e6ecf8',
           overflow: 'auto'
         }}
       >

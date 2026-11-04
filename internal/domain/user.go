@@ -67,6 +67,14 @@ type RootSigninInput struct {
 	Signature string `json:"signature"`
 }
 
+// PortalSigninInput is HMAC sign-in for an existing console user (admin portal SSO).
+// Same signature shape as RootSigninInput (email:timestamp with SECRET_KEY).
+type PortalSigninInput struct {
+	Email     string `json:"email"`
+	Timestamp int64  `json:"timestamp"`
+	Signature string `json:"signature"`
+}
+
 type AuthResponse struct {
 	Token     string    `json:"token"`
 	User      User      `json:"user"`
@@ -78,6 +86,7 @@ type UserServiceInterface interface {
 	SignIn(ctx context.Context, input SignInInput) (string, error)
 	VerifyCode(ctx context.Context, input VerifyCodeInput) (*AuthResponse, error)
 	RootSignin(ctx context.Context, input RootSigninInput) (*AuthResponse, error)
+	PortalSignin(ctx context.Context, input PortalSigninInput) (*AuthResponse, error)
 	VerifyUserSession(ctx context.Context, userID string, sessionID string) (*User, error)
 	GetUserByID(ctx context.Context, userID string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)

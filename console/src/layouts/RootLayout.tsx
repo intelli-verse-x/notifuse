@@ -10,6 +10,7 @@ export function RootLayout() {
   const navigate = useNavigate()
 
   const isSigninRoute = useMatch({ from: '/console/signin', shouldThrow: false })
+  const isSsoRoute = useMatch({ from: '/console/sso', shouldThrow: false })
   const isAcceptInvitationRoute = useMatch({
     from: '/console/accept-invitation',
     shouldThrow: false
@@ -21,7 +22,8 @@ export function RootLayout() {
   // Check if system is installed (explicitly check for true to handle undefined case)
   const isInstalled = window.IS_INSTALLED === true
 
-  const isPublicRoute = isSigninRoute || isAcceptInvitationRoute || isLogoutRoute || isSetupRoute
+  const isPublicRoute =
+    isSigninRoute || isSsoRoute || isAcceptInvitationRoute || isLogoutRoute || isSetupRoute
 
   // If system is not installed, redirect to setup wizard
   const shouldRedirectToSetup = !isInstalled && !isSetupRoute
@@ -48,8 +50,8 @@ export function RootLayout() {
       // Check if we're already on the signin pathname to avoid unnecessary navigation
       // This handles race conditions where route matching hasn't completed yet
       const currentPathname = window.location.pathname
-      if (currentPathname === '/console/signin') {
-        // Already on signin route, don't navigate
+      if (currentPathname === '/console/signin' || currentPathname === '/console/sso') {
+        // Already on a public auth route, don't navigate
         return
       }
 

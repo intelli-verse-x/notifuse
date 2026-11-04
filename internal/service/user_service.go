@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Notifuse/notifuse/internal/domain"
@@ -317,6 +318,75 @@ func (s *UserService) RootSignin(ctx context.Context, input domain.RootSigninInp
 	}
 
 	s.logger.WithField("user_id", user.ID).WithField("email", user.Email).Info("Root user signed in via HMAC")
+
+	return &domain.AuthResponse{
+		Token:     token,
+		User:      *user,
+		ExpiresAt: expiresAt,
+	}, nil
+}
+
+// PortalSignin authenticates an existing console user using HMAC signature.
+// Used by the IntelliVerse admin portal for single sign-on (no magic code email).
+// Outside the portal, users still use magic-code sign-in.
+func (s *UserService) PortalSignin(ctx context.Context, input domain.PortalSigninInput) (*domain.AuthResponse, error) {
+	ctx, span := s.tracer.StartServiceSpan(ctx, "UserService", "PortalSignin")
+	defer span.End()
+
+	email := strings.TrimSpace(strings.ToLower(input.Email))
+	s.tracer.AddAttribute(ctx, "user.email", email)
+
+	if s.rateLimiter != nil && !s.rateLimiter.Allow("signin", email) {
+		s.logger.WithField("email", email).Warn("Portal sign-in rate limit exceeded")
+		s.tracer.AddAttribute(ctx, "error", "rate_limit_exceeded")
+		s.tracer.MarkSpanError(ctx, fmt.Errorf("rate limit exceeded"))
+		return nil, fmt.Errorf("too many sign-in attempts, please try again in a few minutes")
+	}
+
+	now := time.Now().Unix()
+	if input.Timestamp < now-60 || input.Timestamp > now+60 {
+		s.logger.WithField("email", email).WithField("timestamp", input.Timestamp).Warn("Portal signin timestamp out of range")
+		s.tracer.AddAttribute(ctx, "error", "invalid_timestamp")
+		return nil, fmt.Errorf("unauthorized: invalid credentials")
+	}
+
+	message := fmt.Sprintf("%s:%d", email, input.Timestamp)
+	expectedSig := crypto.ComputeHMAC256([]byte(message), s.secretKey)
+	if !hmac.Equal([]byte(input.Signature), []byte(expectedSig)) {
+		s.logger.WithField("email", email).Warn("Portal signin invalid signature")
+		s.tracer.AddAttribute(ctx, "error", "invalid_signature")
+		return nil, fmt.Errorf("unauthorized: invalid credentials")
+	}
+
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		s.logger.WithField("email", email).WithField("error", err.Error()).Warn("Portal signin user not found")
+		s.tracer.MarkSpanError(ctx, err)
+		return nil, fmt.Errorf("unauthorized: invalid credentials")
+	}
+
+	s.tracer.AddAttribute(ctx, "user.id", user.ID)
+
+	expiresAt := time.Now().Add(s.sessionExpiry)
+	session := &domain.Session{
+		ID:        generateID(),
+		UserID:    user.ID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.repo.CreateSession(ctx, session); err != nil {
+		s.logger.WithField("user_id", user.ID).WithField("error", err.Error()).Error("Failed to create session for portal signin")
+		s.tracer.MarkSpanError(ctx, err)
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	token := s.authService.GenerateUserAuthToken(user, session.ID, expiresAt)
+	if s.rateLimiter != nil {
+		s.rateLimiter.Reset("signin", email)
+	}
+
+	s.logger.WithField("user_id", user.ID).WithField("email", user.Email).Info("User signed in via portal HMAC SSO")
 
 	return &domain.AuthResponse{
 		Token:     token,

@@ -23,6 +23,7 @@ type UserServiceInterface interface {
 	SignIn(ctx context.Context, input domain.SignInInput) (string, error)
 	VerifyCode(ctx context.Context, input domain.VerifyCodeInput) (*domain.AuthResponse, error)
 	RootSignin(ctx context.Context, input domain.RootSigninInput) (*domain.AuthResponse, error)
+	PortalSignin(ctx context.Context, input domain.PortalSigninInput) (*domain.AuthResponse, error)
 	VerifyUserSession(ctx context.Context, userID string, sessionID string) (*domain.User, error)
 	GetUserByID(ctx context.Context, userID string) (*domain.User, error)
 	UpdateUserLanguage(ctx context.Context, userID string, language string) error
@@ -188,6 +189,57 @@ func (h *UserHandler) RootSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set user ID in span once we have it
+	if response != nil && response.User.ID != "" {
+		span.AddAttributes(trace.StringAttribute("user.id", response.User.ID))
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// PortalSignIn handles HMAC sign-in for an existing console user (admin portal SSO).
+func (h *UserHandler) PortalSignIn(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.tracer.StartSpan(r.Context(), "UserHandler.PortalSignIn")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		WriteJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeInvalidArgument,
+			Message: "Method not allowed",
+		})
+		return
+	}
+
+	var input domain.PortalSigninInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		WriteJSONError(w, "Invalid request body", http.StatusBadRequest)
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeInvalidArgument,
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	if input.Email == "" || input.Timestamp == 0 || input.Signature == "" {
+		WriteJSONError(w, "Missing required fields: email, timestamp, signature", http.StatusBadRequest)
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeInvalidArgument,
+			Message: "Missing required fields",
+		})
+		return
+	}
+
+	span.AddAttributes(trace.StringAttribute("user.email.domain", extractEmailDomain(input.Email)))
+
+	h.tracer.AddAttribute(ctx, "operation", "PortalSignin")
+	response, err := h.userService.PortalSignin(ctx, input)
+	if err != nil {
+		WriteJSONError(w, "Invalid credentials", http.StatusUnauthorized)
+		h.tracer.MarkSpanError(ctx, err)
+		return
+	}
+
 	if response != nil && response.User.ID != "" {
 		span.AddAttributes(trace.StringAttribute("user.id", response.User.ID))
 	}
@@ -377,6 +429,7 @@ func (h *UserHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/user.signin", h.SignIn)
 	mux.HandleFunc("/api/user.verify", h.VerifyCode)
 	mux.HandleFunc("/api/user.rootSignin", h.RootSignIn)
+	mux.HandleFunc("/api/user.portalSignin", h.PortalSignIn)
 
 	// Create auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(h.getJWTSecret)

@@ -3,6 +3,7 @@ import { createRootRoute, createRoute, useParams, useNavigate } from '@tanstack/
 import { RootLayout } from './layouts/RootLayout'
 import { WorkspaceLayout } from './layouts/WorkspaceLayout'
 import { SignInPage } from './pages/SignInPage'
+import { SsoPage } from './pages/SsoPage'
 import { LogoutPage } from './pages/LogoutPage'
 import { AcceptInvitationPage } from './pages/AcceptInvitationPage'
 import { CreateWorkspacePage } from './pages/CreateWorkspacePage'
@@ -41,6 +42,11 @@ export interface SignInSearch {
   email?: string
 }
 
+export interface SsoSearch {
+  token?: string
+  workspaceId?: string
+}
+
 export interface AcceptInvitationSearch {
   token?: string
 }
@@ -73,6 +79,17 @@ const signinRoute = createRoute({
   component: SignInPage,
   validateSearch: (search: Record<string, unknown>): SignInSearch => ({
     email: search.email as string | undefined
+  })
+})
+
+// Portal SSO: Admin Management redirects here with a minted JWT (no magic code).
+const ssoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/console/sso',
+  component: SsoPage,
+  validateSearch: (search: Record<string, unknown>): SsoSearch => ({
+    token: search.token as string | undefined,
+    workspaceId: search.workspaceId as string | undefined
   })
 })
 
@@ -245,6 +262,7 @@ const workspaceBlogRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signinRoute,
+  ssoRoute,
   logoutRoute,
   setupRoute,
   acceptInvitationRoute,

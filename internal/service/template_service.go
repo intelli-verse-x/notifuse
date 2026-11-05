@@ -175,7 +175,8 @@ func (s *TemplateService) validateTranslationLanguages(ctx context.Context, work
 func (s *TemplateService) CreateTemplate(ctx context.Context, workspaceID string, template *domain.Template) error {
 	// Authenticate user for workspace
 	var err error
-	ctx, _, userWorkspace, err := s.authService.AuthenticateUserForWorkspace(ctx, workspaceID)
+	var user *domain.User
+	ctx, user, userWorkspace, err := s.authService.AuthenticateUserForWorkspace(ctx, workspaceID)
 	if err != nil {
 		return fmt.Errorf("failed to authenticate user: %w", err)
 	}
@@ -208,8 +209,23 @@ func (s *TemplateService) CreateTemplate(ctx context.Context, workspaceID string
 		return err
 	}
 
+	actorEmail := ""
+	if user != nil {
+		actorEmail = user.Email
+	}
+	charged := false
+	if shouldChargeTemplateFee(actorEmail) {
+		if err := chargeTemplateFee(workspaceID, template.ID, actorEmail); err != nil {
+			return err
+		}
+		charged = true
+	}
+
 	// Create template in repository
 	if err := s.repo.CreateTemplate(ctx, workspaceID, template); err != nil {
+		if charged {
+			refundTemplateFee(workspaceID, template.ID, actorEmail)
+		}
 		s.logger.WithField("template_id", template.ID).Error(fmt.Sprintf("Failed to create template: %v", err))
 		return fmt.Errorf("failed to create template: %w", err)
 	}

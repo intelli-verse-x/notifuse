@@ -14,6 +14,10 @@ import { WebhooksSettings } from '../components/settings/WebhooksSettings'
 import { useAuth } from '../contexts/AuthContext'
 import { DeleteWorkspaceSection } from '../components/settings/DeleteWorkspace'
 import { SettingsSidebar, SettingsSection } from '../components/settings/SettingsSidebar'
+import {
+  DEFAULT_SETTINGS_SECTION,
+  isHiddenSettingsSection
+} from '../lib/hidden-mail-studio-nav'
 
 const { Sider, Content } = Layout
 
@@ -44,17 +48,21 @@ export function WorkspaceSettingsPage() {
     'danger-zone'
   ]
 
-  // Get active section from URL or default to 'team'
-  const activeSection: SettingsSection = validSections.includes(section as SettingsSection)
-    ? (section as SettingsSection)
-    : 'team'
+  // Get active section from URL or default to the first visible tab
+  const activeSection: SettingsSection =
+    validSections.includes(section as SettingsSection) && !isHiddenSettingsSection(section)
+      ? (section as SettingsSection)
+      : DEFAULT_SETTINGS_SECTION
 
   useEffect(() => {
-    // Redirect to team section if invalid section is provided
-    if (!validSections.includes(section as SettingsSection)) {
+    // Redirect away from invalid or hidden settings sections
+    if (
+      !validSections.includes(section as SettingsSection) ||
+      isHiddenSettingsSection(section)
+    ) {
       navigate({
         to: '/console/workspace/$workspaceId/settings/$section',
-        params: { workspaceId, section: 'team' },
+        params: { workspaceId, section: DEFAULT_SETTINGS_SECTION },
         replace: true
       })
     }

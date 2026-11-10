@@ -22,6 +22,7 @@ import { DebugSegmentPage } from './pages/DebugSegmentPage'
 import { BlogPage } from './pages/BlogPage'
 import SetupWizard from './pages/SetupWizard'
 import { createRouter } from '@tanstack/react-router'
+import { DEFAULT_SETTINGS_SECTION } from './lib/hidden-mail-studio-nav'
 
 export interface ContactsSearch {
   email?: string
@@ -219,7 +220,7 @@ const WorkspaceSettingsRedirect = () => {
   useEffect(() => {
     navigate({
       to: '/console/workspace/$workspaceId/settings/$section',
-      params: { workspaceId, section: 'team' },
+      params: { workspaceId, section: DEFAULT_SETTINGS_SECTION },
       replace: true
     })
   }, [workspaceId, navigate])

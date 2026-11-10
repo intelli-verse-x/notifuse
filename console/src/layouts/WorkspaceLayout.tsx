@@ -30,6 +30,10 @@ import {
   SettingOutlined,
   DownOutlined
 } from '@ant-design/icons'
+import {
+  HIDDEN_WORKSPACE_NAV_KEYS,
+  isHiddenWorkspaceNavPath
+} from '../lib/hidden-mail-studio-nav'
 
 const { Content, Sider, Header } = Layout
 
@@ -143,6 +147,16 @@ export function WorkspaceLayout() {
     const permissions = userPermissions[resource]
     return permissions?.read || permissions?.write || false
   }
+
+  // Hidden Mail Studio features: no menu entry, and a typed URL sends you home.
+  useEffect(() => {
+    if (!workspaceId || !isHiddenWorkspaceNavPath(currentPath)) return
+    navigate({
+      to: '/console/workspace/$workspaceId',
+      params: { workspaceId },
+      replace: true
+    })
+  }, [currentPath, workspaceId, navigate])
 
   // Determine which key should be selected based on the current path
   let selectedKey = 'analytics' // Default to analytics/dashboard
@@ -402,7 +416,13 @@ export function WorkspaceLayout() {
         </Link>
       )
     }
-  ].filter((item) => Boolean(item)) as Array<{ key: string; icon: React.ReactNode; label: React.ReactNode }>
+  ].filter(
+    (item) =>
+      Boolean(item) &&
+      !(HIDDEN_WORKSPACE_NAV_KEYS as readonly string[]).includes(
+        (item as { key: string }).key
+      )
+  ) as Array<{ key: string; icon: React.ReactNode; label: React.ReactNode }>
 
   return (
     <ContactsCsvUploadProvider>

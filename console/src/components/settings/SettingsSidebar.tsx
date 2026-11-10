@@ -7,6 +7,7 @@ import {
   MailOutlined
 } from '@ant-design/icons'
 import { useLingui } from '@lingui/react/macro'
+import { HIDDEN_SETTINGS_SECTIONS } from '../../lib/hidden-mail-studio-nav'
 
 export type SettingsSection =
   | 'team'
@@ -123,6 +124,10 @@ export function SettingsSidebar({ activeSection, onSectionChange, isOwner }: Set
     })
   }
 
+  const visibleMenuItems = menuItems.filter(
+    (item) => !(HIDDEN_SETTINGS_SECTIONS as readonly string[]).includes(item.key)
+  )
+
   return (
     <div
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
@@ -138,7 +143,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, isOwner }: Set
       <Menu
         mode="inline"
         selectedKeys={[activeSection]}
-        items={menuItems}
+        items={visibleMenuItems}
         onClick={({ key }) => onSectionChange(key as SettingsSection)}
         style={{ borderRight: 0, backgroundColor: 'transparent' }}
         theme="light"

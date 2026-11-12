@@ -12,6 +12,7 @@ export const BRAND_HIDDEN_WORKSPACE_NAV_KEYS = [
   'file-manager',
   'logs',
   'lists',
+  'contacts',
   'transactional-notifications',
   'settings'
 ] as const

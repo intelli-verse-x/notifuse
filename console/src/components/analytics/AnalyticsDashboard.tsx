@@ -5,12 +5,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useLingui } from '@lingui/react/macro'
 import numbro from 'numbro'
 import { EmailMetricsChart } from './EmailMetricsChart'
-// import { NewContactsTable } from './NewContactsTable'
 import { Workspace, Integration } from '../../services/api/types'
 import { FailedMessagesTable } from './FailedMessagesTable'
 import { NewContactsTable } from './NewContactsTable'
 import { emailProviders } from '../integrations/EmailProviders'
 import { analyticsService } from '../../services/api/analytics'
+import { useAuth } from '../../contexts/AuthContext'
+import { isMailStudioAdmin } from '../../lib/hidden-mail-studio-nav'
 
 interface AnalyticsDashboardProps {
   workspace: Workspace
@@ -25,6 +26,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 }) => {
   const { t } = useLingui()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = isMailStudioAdmin(user?.email)
 
   // Use timeRange and timezone as refresh key to update components when they change
   const refreshKey = `${timeRange[0]}-${timeRange[1]}-${timezone || ''}`
@@ -261,9 +264,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         timezone={timezone}
       />
 
-      <div className="mt-8">
-        <NewContactsTable key={`new-contacts-${refreshKey}`} workspace={workspace} />
-      </div>
+      {/* Brands already have Contacts nav hidden — hide this contact list too */}
+      {isAdmin && (
+        <div className="mt-8">
+          <NewContactsTable key={`new-contacts-${refreshKey}`} workspace={workspace} />
+        </div>
+      )}
 
       <div className="mt-8">
         <FailedMessagesTable key={`failed-messages-${refreshKey}`} workspace={workspace} />

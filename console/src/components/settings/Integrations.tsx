@@ -54,6 +54,8 @@ import {
   registerWebhook,
   WebhookRegistrationStatus
 } from '../../services/api/webhook_registration'
+import { useAuth } from '../../contexts/AuthContext'
+import { isMailStudioAdmin } from '../../lib/hidden-mail-studio-nav'
 import {
   faCopy,
   faPaperPlane,
@@ -119,6 +121,8 @@ interface EmailIntegrationProps {
   startTestEmailProvider: (integrationId: string) => void
   setIntegrationAsDefault: (id: string, purpose: 'marketing' | 'transactional') => Promise<void>
   deleteIntegration: (integrationId: string) => Promise<void>
+  /** Admin-only: webhooks, rate limits, AWS region, etc. */
+  showAdvancedProviderFields?: boolean
 }
 
 // EmailIntegration component
@@ -133,7 +137,8 @@ const EmailIntegration = ({
   startEditEmailProvider,
   startTestEmailProvider,
   setIntegrationAsDefault,
-  deleteIntegration
+  deleteIntegration,
+  showAdvancedProviderFields = false
 }: EmailIntegrationProps) => {
   const { t } = useLingui()
   const provider = integration.email_provider
@@ -142,17 +147,17 @@ const EmailIntegration = ({
   const [loadingWebhooks, setLoadingWebhooks] = useState(false)
   const [registrationInProgress, setRegistrationInProgress] = useState(false)
 
-  // Fetch webhook status when component mounts
+  // Fetch webhook status when component mounts (admin only)
   useEffect(() => {
-    if (workspace?.id && integration?.id) {
+    if (showAdvancedProviderFields && workspace?.id && integration?.id) {
       fetchWebhookStatus()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchWebhookStatus is stable
-  }, [workspace?.id, integration?.id])
+  }, [workspace?.id, integration?.id, showAdvancedProviderFields])
 
   // Function to fetch webhook status
   const fetchWebhookStatus = async () => {
-    if (!workspace?.id || !integration?.id) return
+    if (!showAdvancedProviderFields || !workspace?.id || !integration?.id) return
 
     // Only fetch webhook status for non-SMTP providers
     if (integration.email_provider.kind === 'smtp') return
@@ -429,7 +434,7 @@ const EmailIntegration = ({
           </Space>
         </Descriptions.Item>
         {renderProviderSpecificDetails(provider)}
-        {provider.kind !== 'smtp' && renderWebhookStatus()}
+        {showAdvancedProviderFields && provider.kind !== 'smtp' && renderWebhookStatus()}
       </Descriptions>
     </Card>
   )
@@ -488,6 +493,8 @@ export function Integrations({
   sendersOnly = false
 }: IntegrationsProps) {
   const { t } = useLingui()
+  const { user } = useAuth()
+  const isAdmin = isMailStudioAdmin(user?.email)
   // State for providers
   const [emailProviderForm] = Form.useForm()
   const rateLimitPerMinute = Form.useWatch('rate_limit_per_minute', emailProviderForm)
@@ -1161,6 +1168,7 @@ export function Integrations({
                   startTestEmailProvider={startTestEmailProvider}
                   setIntegrationAsDefault={setIntegrationAsDefault}
                   deleteIntegration={deleteIntegration}
+                  showAdvancedProviderFields={isAdmin}
                 />
               </div>
             )
@@ -1500,8 +1508,14 @@ export function Integrations({
 
         {isOwner && providerType === 'ses' && (
           <>
-            <Form.Item name={['ses', 'region']} label={t`AWS Region`} rules={[{ required: true }]}>
-              <Select placeholder={t`Select AWS Region`} disabled={!isOwner}>
+            {/* Keep region in the form for brands; only admins see/edit it */}
+            <Form.Item
+              name={['ses', 'region']}
+              label={t`AWS Region`}
+              rules={isAdmin ? [{ required: true }] : undefined}
+              hidden={!isAdmin}
+            >
+              <Select placeholder={t`Select AWS Region`} disabled={!isOwner || !isAdmin}>
                 <Select.Option value="us-east-2">US East (Ohio) - us-east-2</Select.Option>
                 <Select.Option value="us-east-1">US East (N. Virginia) - us-east-1</Select.Option>
                 <Select.Option value="us-west-1">US West (N. California) - us-west-1</Select.Option>
@@ -1868,19 +1882,30 @@ export function Integrations({
 
         {isOwner && (
           <>
+            {/* Keep rate limit in form values for brands; only admins see/edit it */}
             <Form.Item
               name="rate_limit_per_minute"
               label={t`Rate limit for marketing emails (emails per minute)`}
-              rules={[
-                { required: true, message: 'Please enter a rate limit' },
-                { type: 'number', min: 1, message: 'Rate limit must be at least 1' }
-              ]}
+              rules={
+                isAdmin
+                  ? [
+                      { required: true, message: 'Please enter a rate limit' },
+                      { type: 'number', min: 1, message: 'Rate limit must be at least 1' }
+                    ]
+                  : undefined
+              }
               initialValue={25}
+              hidden={!isAdmin}
             >
-              <InputNumber min={1} placeholder="25" disabled={!isOwner} style={{ width: '100%' }} />
+              <InputNumber
+                min={1}
+                placeholder="25"
+                disabled={!isOwner || !isAdmin}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
 
-            {(rateLimitPerMinute || 25) > 0 && (
+            {isAdmin && (rateLimitPerMinute || 25) > 0 && (
               <div className="text-xs text-gray-600 -mt-4 mb-4">
                 <div>≈ {((rateLimitPerMinute || 25) * 60).toLocaleString()} {t`emails per hour`}</div>
                 <div>≈ {((rateLimitPerMinute || 25) * 60 * 24).toLocaleString()} {t`emails per day`}</div>
@@ -2031,11 +2056,13 @@ export function Integrations({
         )
       }
     } else if (provider.kind === 'ses' && provider.ses) {
-      items.push(
-        <Descriptions.Item key="region" label={t`AWS Region`}>
-          {provider.ses.region}
-        </Descriptions.Item>
-      )
+      if (isAdmin) {
+        items.push(
+          <Descriptions.Item key="region" label={t`AWS Region`}>
+            {provider.ses.region}
+          </Descriptions.Item>
+        )
+      }
     } else if (provider.kind === 'sparkpost' && provider.sparkpost) {
       items.push(
         <Descriptions.Item key="endpoint" label={t`API Endpoint`}>
@@ -2068,16 +2095,20 @@ export function Integrations({
       )
     }
 
-    // Add rate limit for all providers
-    items.push(
-      <Descriptions.Item key="rate_limit" label={t`Rate Limit for Marketing`}>
-        <div>{provider.rate_limit_per_minute} emails/min</div>
-        <div className="text-xs text-gray-600 mt-1">
-          <div>≈ {(provider.rate_limit_per_minute * 60).toLocaleString()} {t`emails per hour`}</div>
-          <div>≈ {(provider.rate_limit_per_minute * 60 * 24).toLocaleString()} {t`emails per day`}</div>
-        </div>
-      </Descriptions.Item>
-    )
+    // Rate limit is admin-only on Mail address / integrations cards
+    if (isAdmin) {
+      items.push(
+        <Descriptions.Item key="rate_limit" label={t`Rate Limit for Marketing`}>
+          <div>{provider.rate_limit_per_minute} emails/min</div>
+          <div className="text-xs text-gray-600 mt-1">
+            <div>≈ {(provider.rate_limit_per_minute * 60).toLocaleString()} {t`emails per hour`}</div>
+            <div>
+              ≈ {(provider.rate_limit_per_minute * 60 * 24).toLocaleString()} {t`emails per day`}
+            </div>
+          </div>
+        </Descriptions.Item>
+      )
+    }
 
     return items
   }

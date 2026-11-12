@@ -11,14 +11,11 @@ import {
   Input,
   App,
   Badge,
-  Descriptions,
   Progress,
   Popover,
   Alert,
   Popconfirm,
-  Pagination,
-  Tag,
-  Table
+  Pagination
 } from 'antd'
 import { useParams } from '@tanstack/react-router'
 import { useLingui } from '@lingui/react/macro'
@@ -29,8 +26,6 @@ import { listSegments } from '../services/api/segment'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faCirclePause,
-  faCircleCheck,
-  faCircleXmark,
   faPenToSquare,
   faTrashCan,
   faCirclePlay,
@@ -39,14 +34,7 @@ import {
   faCircleQuestion,
   faPaperPlane
 } from '@fortawesome/free-regular-svg-icons'
-import {
-  faArrowPointer,
-  faBan,
-  faChevronDown,
-  faChevronUp,
-  faSpinner,
-  faRefresh
-} from '@fortawesome/free-solid-svg-icons'
+import { faBan, faSpinner, faRefresh } from '@fortawesome/free-solid-svg-icons'
 import React, { useState } from 'react'
 import dayjs from '../lib/dayjs'
 import { UpsertBroadcastDrawer } from '../components/broadcasts/UpsertBroadcastDrawer'
@@ -55,12 +43,11 @@ import { useAuth, useWorkspacePermissions } from '../contexts/AuthContext'
 import TemplatePreviewDrawer from '../components/templates/TemplatePreviewDrawer'
 import { BroadcastStats, ProgressStats } from '../components/broadcasts/BroadcastStats'
 import { SendingProgress } from '../components/broadcasts/SendingProgress'
-import { Integration, List, Sender } from '../services/api/types'
+import { List } from '../services/api/types'
 import SendTemplateModal from '../components/templates/SendTemplateModal'
 import { Workspace, UserPermissions } from '../services/api/types'
 import { Template } from '../services/api/template'
 import { Template as BroadcastTemplate } from '../services/api/broadcast'
-import Subtitle from '../components/common/subtitle'
 
 const { Text } = Typography
 
@@ -237,9 +224,6 @@ interface BroadcastCardProps {
   onRefresh: (broadcast: Broadcast) => void
   currentWorkspace: Workspace | undefined
   permissions: UserPermissions | null
-  isFirst?: boolean
-  currentPage: number
-  pageSize: number
 }
 
 const BroadcastCard: React.FC<BroadcastCardProps> = ({
@@ -254,15 +238,9 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
   onSchedule,
   onRefresh,
   currentWorkspace,
-  permissions,
-  isFirst = false,
-  currentPage,
-  pageSize
+  permissions
 }) => {
   const { t } = useLingui()
-  const [showDetails, setShowDetails] = useState(isFirst)
-  const queryClient = useQueryClient()
-  const { message } = App.useApp()
   const [testModalOpen, setTestModalOpen] = useState(false)
   const [templateToTest, setTemplateToTest] = useState<Template | null>(null)
   const [progressStats, setProgressStats] = useState<ProgressStats | undefined>()
@@ -305,27 +283,6 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
 
   // Get enqueued count from task state
   const enqueuedCount = task?.state?.send_broadcast?.enqueued_count
-
-  // Handler for selecting winner
-  const handleSelectWinner = async (templateId: string) => {
-    try {
-      await broadcastApi.selectWinner({
-        workspace_id: workspaceId,
-        id: broadcast.id,
-        template_id: templateId
-      })
-      message.success(
-        t`Winner selected successfully! The broadcast will be sent to remaining recipients.`
-      )
-      queryClient.invalidateQueries({
-        queryKey: ['broadcasts', workspaceId, currentPage, pageSize]
-      })
-      queryClient.invalidateQueries({ queryKey: ['testResults', workspaceId, broadcast.id] })
-    } catch (error) {
-      message.error(t`Failed to select winner`)
-      console.error(error)
-    }
-  }
 
   // Handler for testing a template
   const handleTestTemplate = (template: Template) => {
@@ -443,35 +400,76 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
           }
         }}
         title={
-          <Space size="large" className="min-w-0">
-            <div className="text-[#0b1433] font-medium truncate">{broadcast.name}</div>
-            <div className="text-xs font-normal shrink-0">
-              {task ? (
-                <Popover
-                  content={taskPopoverContent}
-                  title={t`Task Status`}
-                  placement="bottom"
-                  trigger="hover"
-                >
-                  <span className="cursor-help">
+          <div className="min-w-0 flex flex-col gap-1 py-0.5">
+            <Space size="large" className="min-w-0">
+              <div className="text-[#0b1433] font-medium truncate">{broadcast.name}</div>
+              <div className="text-xs font-normal shrink-0">
+                {task ? (
+                  <Popover
+                    content={taskPopoverContent}
+                    title={t`Task Status`}
+                    placement="bottom"
+                    trigger="hover"
+                  >
+                    <span className="cursor-help">
+                      {getStatusBadge(broadcast, remainingTestTime, progressStats, t)}
+                      <FontAwesomeIcon
+                        icon={faCircleQuestion}
+                        style={{ opacity: 0.7 }}
+                        className="ml-2"
+                      />
+                    </span>
+                  </Popover>
+                ) : isTaskLoading ? (
+                  <span className="text-gray-400">
                     {getStatusBadge(broadcast, remainingTestTime, progressStats, t)}
-                    <FontAwesomeIcon
-                      icon={faCircleQuestion}
-                      style={{ opacity: 0.7 }}
-                      className="ml-2"
-                    />
+                    <FontAwesomeIcon icon={faSpinner} spin className="ml-2" />
                   </span>
-                </Popover>
-              ) : isTaskLoading ? (
-                <span className="text-gray-400">
-                  {getStatusBadge(broadcast, remainingTestTime, progressStats, t)}
-                  <FontAwesomeIcon icon={faSpinner} spin className="ml-2" />
-                </span>
-              ) : (
-                getStatusBadge(broadcast, remainingTestTime, progressStats, t)
-              )}
-            </div>
-          </Space>
+                ) : (
+                  getStatusBadge(broadcast, remainingTestTime, progressStats, t)
+                )}
+              </div>
+            </Space>
+            {(() => {
+              if (broadcast.completed_at) {
+                return (
+                  <Text type="secondary" className="text-xs">
+                    {t`Completed`} {dayjs(broadcast.completed_at).format('lll')}
+                  </Text>
+                )
+              }
+              if (broadcast.started_at) {
+                return (
+                  <Text type="secondary" className="text-xs">
+                    {t`Started`} {dayjs(broadcast.started_at).format('lll')}
+                  </Text>
+                )
+              }
+              if (
+                broadcast.schedule?.is_scheduled &&
+                broadcast.schedule.scheduled_date &&
+                broadcast.schedule.scheduled_time
+              ) {
+                const scheduledAt = dayjs(
+                  `${broadcast.schedule.scheduled_date} ${broadcast.schedule.scheduled_time}`
+                )
+                return (
+                  <Text type="secondary" className="text-xs">
+                    {t`Scheduled`} {scheduledAt.format('lll')}
+                    {broadcast.schedule.timezone ? ` (${broadcast.schedule.timezone})` : ''}
+                  </Text>
+                )
+              }
+              if (broadcast.created_at) {
+                return (
+                  <Text type="secondary" className="text-xs">
+                    {t`Created`} {dayjs(broadcast.created_at).format('lll')}
+                  </Text>
+                )
+              }
+              return null
+            })()}
+          </div>
         }
         extra={
           <Space>
@@ -647,463 +645,46 @@ const BroadcastCard: React.FC<BroadcastCardProps> = ({
         />
       </div>
 
-      <div className="bg-white border-t border-[#e6ecf8]">
-        <div className="text-center py-2">
-          <Button type="link" onClick={() => setShowDetails(!showDetails)}>
-            {showDetails ? (
-              <Space size="small">
-                <FontAwesomeIcon icon={faChevronUp} style={{ opacity: 0.7 }} className="mr-1" />{' '}
-                {t`Hide Details`}
-              </Space>
-            ) : (
-              <Space size="small">
-                <FontAwesomeIcon icon={faChevronDown} style={{ opacity: 0.7 }} className="mr-1" />{' '}
-                {t`Show Details`}
-              </Space>
-            )}
-          </Button>
-        </div>
-
-        {showDetails && (
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Subtitle className="!mb-0">{t`Variations`}</Subtitle>
-            </div>
-            <div className="mb-6">
-              <Table
-                showHeader={false}
-                dataSource={(broadcast.test_settings.variations || []).map((variation, index) => {
-                  const emailProvider = currentWorkspace?.integrations?.find(
-                    (i: Integration) =>
-                      i.id ===
-                      (variation.template?.category === 'marketing'
-                        ? currentWorkspace.settings?.marketing_email_provider_id
-                        : currentWorkspace.settings?.transactional_email_provider_id)
-                  )?.email_provider
-
-                  const templateSender = emailProvider?.senders.find(
-                    (s: Sender) => s.id === variation.template?.email?.sender_id
-                  )
-
-                  const variationResult = testResults?.variation_results?.[variation.template_id]
-                  const isWinner = testResults?.winning_template === variation.template_id
-
-                  return {
-                    key: variation.template_id || index,
-                    index: index + 1,
-                    isWinner,
-                    templateName: variation.template?.name || t`Untitled`,
-                    template: variation.template,
-                    sender: templateSender
-                      ? `${templateSender.name} <${templateSender.email}>`
-                      : t`Default sender`,
-                    subject: variation.template?.email?.subject || t`N/A`,
-                    subjectPreview: variation.template?.email?.subject_preview,
-                    replyTo: variation.template?.email?.reply_to || '-',
-                    metrics: variationResult || variation.metrics,
-                    variation,
-                    templateId: variation.template_id
-                  }
-                })}
-                columns={[
-                  {
-                    title: '#',
-                    dataIndex: 'index',
-                    key: 'index',
-                    render: (index, record) => (
-                      <Space>
-                        {'#' + index}
-                        {record.isWinner && <Badge status="success" />}
-                      </Space>
-                    )
-                  },
-                  {
-                    title: t`Template`,
-                    key: 'templateName',
-                    render: (record) => <Tooltip title={t`Template`}>{record.templateName}</Tooltip>
-                  },
-                  {
-                    title: t`Subject`,
-                    dataIndex: 'subject',
-                    key: 'subject',
-                    render: (subject, record) => (
-                      <div>
-                        <div>{subject}</div>
-                        {record.subjectPreview && (
-                          <div className="text-xs text-gray-500">{record.subjectPreview}</div>
-                        )}
-                      </div>
-                    )
-                  },
-                  {
-                    title: t`Info`,
-                    key: 'sender',
-                    render: (record) => (
-                      <div>
-                        <div>
-                          <span className="font-medium text-gray-500">{t`From:`}</span> {record.sender}
-                        </div>
-                        {record.replyTo && record.replyTo !== '-' && (
-                          <div>
-                            <span className="font-medium text-gray-500">{t`Reply To:`}</span>{' '}
-                            {record.replyTo}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                  ...(broadcast.status !== 'draft'
-                    ? [
-                        {
-                          title: t`Opens`,
-                          key: 'opens',
-                          width: 80,
-                          render: (_: unknown, record: { metrics?: { open_rate?: number; opens?: number; recipients?: number } }) => {
-                            const metrics = record.metrics
-                            if (!metrics) {
-                              return (
-                                <Tooltip title={t`0 opens out of 0 recipients`}>
-                                  <>
-                                    <FontAwesomeIcon icon={faEye} style={{ opacity: 0.7 }} className="text-purple-500" />
-                                    <span className="cursor-help ml-1">{t`N/A`}</span>
-                                  </>
-                                </Tooltip>
-                              )
-                            }
-                            const openRate = metrics.open_rate || 0
-                            const opens = metrics.opens || 0
-                            const recipients = metrics.recipients || 0
-                            return (
-                              <Tooltip title={t`${opens} opens out of ${recipients} recipients`}>
-                                <>
-                                  <FontAwesomeIcon icon={faEye} style={{ opacity: 0.7 }} className="text-purple-500" />{' '}
-                                  <span className="cursor-help ml-1">
-                                    {(openRate * 100).toFixed(1)}%
-                                  </span>
-                                </>
-                              </Tooltip>
-                            )
-                          }
-                        },
-                        {
-                          title: t`Clicks`,
-                          key: 'clicks',
-                          width: 80,
-                          render: (_: unknown, record: { metrics?: { click_rate?: number; clicks?: number; recipients?: number } }) => {
-                            const metrics = record.metrics
-                            if (!metrics) {
-                              return (
-                                <Tooltip title={t`0 clicks out of 0 recipients`}>
-                                  <>
-                                    <FontAwesomeIcon
-                                      icon={faArrowPointer}
-                                      style={{ opacity: 0.7 }}
-                                      className="text-cyan-500"
-                                    />{' '}
-                                    <span className="cursor-help ml-1">{t`N/A`}</span>
-                                  </>
-                                </Tooltip>
-                              )
-                            }
-                            const clickRate = metrics.click_rate || 0
-                            const clicks = metrics.clicks || 0
-                            const recipients = metrics.recipients || 0
-                            return (
-                              <Tooltip title={t`${clicks} clicks out of ${recipients} recipients`}>
-                                <>
-                                  <FontAwesomeIcon icon={faArrowPointer} style={{ opacity: 0.7 }} className="text-cyan-500" />{' '}
-                                  <span className="cursor-help ml-1">
-                                    {(clickRate * 100).toFixed(1)}%
-                                  </span>
-                                </>
-                              </Tooltip>
-                            )
-                          }
-                        }
-                      ]
-                    : []),
-                  {
-                    title: t`Actions`,
-                    key: 'actions',
-                    width: 150,
-                    align: 'right',
-                    render: (_, record) => {
-                      const canSelectWinner =
-                        broadcast.status === 'test_completed' &&
-                        !broadcast.test_settings.auto_send_winner
-                      return (
-                        <Space size="small">
-                          {record.template && (
-                            <Tooltip
-                              title={
-                                !(permissions?.templates?.read && permissions?.contacts?.write)
-                                  ? t`You need read template and write contact permissions to send test emails`
-                                  : t`Send Test Email`
-                              }
-                            >
-                              <Button
-                                size="small"
-                                type="text"
-                                icon={
-                                  <FontAwesomeIcon icon={faPaperPlane} className="opacity-70" />
-                                }
-                                onClick={() => record.template && handleTestTemplate(toTemplateApiType(record.template))}
-                                disabled={
-                                  !(permissions?.templates?.read && permissions?.contacts?.write)
-                                }
-                              />
-                            </Tooltip>
-                          )}
-                          <Tooltip title={t`Preview Template`}>
-                            <>
-                              {record.template && currentWorkspace ? (
-                                <TemplatePreviewDrawer
-                                  record={toTemplateApiType(record.template)}
-                                  workspace={currentWorkspace}
-                                >
-                                  <Button
-                                    size="small"
-                                    type="text"
-                                    ghost
-                                    icon={<FontAwesomeIcon icon={faEye} className="opacity-70" />}
-                                  />
-                                </TemplatePreviewDrawer>
-                              ) : (
-                                <Button
-                                  size="small"
-                                  type="text"
-                                  ghost
-                                  icon={<FontAwesomeIcon icon={faEye} className="opacity-70" />}
-                                  disabled
-                                />
-                              )}
-                            </>
-                          </Tooltip>
-                          {canSelectWinner && record.templateId && (
-                            <Tooltip
-                              title={
-                                !permissions?.broadcasts?.write
-                                  ? t`You don't have write permission for broadcasts`
-                                  : undefined
-                              }
-                            >
-                              <Popconfirm
-                                title={t`Select Winner`}
-                                description={t`Are you sure you want to select "${record.templateName}" as the winner? The broadcast will be sent to the remaining recipients.`}
-                                onConfirm={() => handleSelectWinner(record.templateId)}
-                                okText={t`Yes, Select Winner`}
-                                cancelText={t`Cancel`}
-                              >
-                                <Button
-                                  size="small"
-                                  type="primary"
-                                  disabled={!permissions?.broadcasts?.write}
-                                >
-                                  {t`Select`}
-                                </Button>
-                              </Popconfirm>
-                            </Tooltip>
-                          )}
-                        </Space>
-                      )
-                    }
-                  }
-                ]}
+      {/* Variations / Audience / advanced details hidden for a simpler campaign card.
+          Sent + Opens stay in BroadcastStats above. Preview / test icons stay on the card. */}
+      {(() => {
+        const primaryTemplate = broadcast.test_settings.variations?.[0]?.template
+        if (!primaryTemplate || !currentWorkspace) return null
+        return (
+          <div className="border-t border-[#e6ecf8] px-6 py-3 flex items-center justify-end gap-1">
+            <Tooltip
+              title={
+                !(permissions?.templates?.read && permissions?.contacts?.write)
+                  ? t`You need read template and write contact permissions to send test emails`
+                  : t`Send Test Email`
+              }
+            >
+              <Button
                 size="small"
-                pagination={false}
-                scroll={{ x: 'max-content' }}
-                rowClassName={(record) => (record.isWinner ? 'bg-emerald-500/10' : '')}
+                type="text"
+                icon={<FontAwesomeIcon icon={faPaperPlane} className="opacity-70" />}
+                onClick={() => handleTestTemplate(toTemplateApiType(primaryTemplate))}
+                disabled={!(permissions?.templates?.read && permissions?.contacts?.write)}
               />
-            </div>
-
-            <Row gutter={32}>
-              <Col span={8}>
-                <Subtitle className="mt-8 mb-4">{t`Audience`}</Subtitle>
-
-                <Descriptions bordered={false} size="small" column={1}>
-                  {/* Audience Information */}
-                  {broadcast.audience.segments && broadcast.audience.segments.length > 0 && (
-                    <Descriptions.Item label={t`Segments`}>
-                      <Space wrap>
-                        {broadcast.audience.segments.map((segmentId) => {
-                          const segment = segments.find((s) => s.id === segmentId)
-                          return segment ? (
-                            <Tag key={segment.id} color={segment.color} bordered={false}>
-                              {segment.name}
-                            </Tag>
-                          ) : (
-                            <Tag key={segmentId} bordered={false}>
-                              {t`Unknown segment`} ({segmentId})
-                            </Tag>
-                          )
-                        })}
-                      </Space>
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.audience.list && (
-                    <Descriptions.Item label={t`List`}>
-                      {(() => {
-                        const list = lists.find((l) => l.id === broadcast.audience.list)
-                        return list ? list.name : t`Unknown list` + ` (${broadcast.audience.list})`
-                      })()}
-                    </Descriptions.Item>
-                  )}
-
-                  <Descriptions.Item label={t`Exclude Unsubscribed`}>
-                    {broadcast.audience.exclude_unsubscribed ? (
-                      <FontAwesomeIcon
-                        icon={faCircleCheck}
-                        className="text-green-500 opacity-70 mt-1"
-                      />
-                    ) : (
-                      <FontAwesomeIcon
-                        icon={faCircleXmark}
-                        className="text-orange-500 opacity-70 mt-1"
-                      />
-                    )}
-                  </Descriptions.Item>
-                </Descriptions>
-
-                {/* Schedule Information */}
-                {broadcast.schedule.is_scheduled &&
-                  broadcast.schedule.scheduled_date &&
-                  broadcast.schedule.scheduled_time && (
-                    <Descriptions.Item label={t`Scheduled`}>
-                      {dayjs(
-                        `${broadcast.schedule.scheduled_date} ${broadcast.schedule.scheduled_time}`
-                      ).format('lll')}
-                      {' '}
-                      {broadcast.schedule.use_recipient_timezone
-                        ? t`in recipients timezone`
-                        : t`in ${broadcast.schedule.timezone}`}
-                    </Descriptions.Item>
-                  )}
-
-                {/* sending */}
-                <Descriptions bordered={false} size="small" column={1}>
-                  {broadcast.started_at && (
-                    <Descriptions.Item label={t`Started`}>
-                      {dayjs(broadcast.started_at).fromNow()}
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.completed_at && (
-                    <Descriptions.Item label={t`Completed`}>
-                      {dayjs(broadcast.completed_at).fromNow()}
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.paused_at && (
-                    <Descriptions.Item label={t`Paused`}>
-                      <Space direction="vertical" size="small">
-                        <div>{dayjs(broadcast.paused_at).fromNow()}</div>
-                        {broadcast.pause_reason && (
-                          <div className="text-orange-600 text-sm">
-                            <strong>{t`Reason:`}</strong> {broadcast.pause_reason}
-                          </div>
-                        )}
-                      </Space>
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.cancelled_at && (
-                    <Descriptions.Item label={t`Cancelled`}>
-                      {dayjs(broadcast.cancelled_at).fromNow()}
-                    </Descriptions.Item>
-                  )}
-                </Descriptions>
-              </Col>
-              <Col span={8}>
-                <Subtitle className="mt-8 mb-4">{t`Web Analytics`}</Subtitle>
-                <Descriptions bordered={false} size="small" column={1}>
-                  {broadcast.utm_parameters?.source && (
-                    <Descriptions.Item label={t`UTM Source`}>
-                      {broadcast.utm_parameters.source}
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.utm_parameters?.medium && (
-                    <Descriptions.Item label={t`UTM Medium`}>
-                      {broadcast.utm_parameters.medium}
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.utm_parameters?.campaign && (
-                    <Descriptions.Item label={t`UTM Campaign`}>
-                      {broadcast.utm_parameters.campaign}
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.utm_parameters?.term && (
-                    <Descriptions.Item label={t`UTM Term`}>
-                      {broadcast.utm_parameters.term}
-                    </Descriptions.Item>
-                  )}
-
-                  {broadcast.utm_parameters?.content && (
-                    <Descriptions.Item label={t`UTM Content`}>
-                      {broadcast.utm_parameters.content}
-                    </Descriptions.Item>
-                  )}
-                </Descriptions>
-              </Col>
-              <Col span={8}>
-                {broadcast.test_settings.enabled && (
-                  <>
-                    <Subtitle className="mt-8 mb-4">{t`A/B Test`}</Subtitle>
-                    <Descriptions bordered={false} size="small" column={1}>
-                      <Descriptions.Item label={t`Sample Percentage`}>
-                        {broadcast.test_settings.sample_percentage}%
-                      </Descriptions.Item>
-
-                      {broadcast.test_settings.auto_send_winner &&
-                        broadcast.test_settings.auto_send_winner_metric &&
-                        broadcast.test_settings.test_duration_hours && (
-                          <Descriptions.Item label={t`Auto-send Winner`}>
-                            <div className="flex items-center">
-                              <FontAwesomeIcon
-                                icon={faCircleCheck}
-                                className="text-green-500 mr-2"
-                                size="sm"
-                                style={{ opacity: 0.7 }}
-                              />
-                              <span>
-                                {t`After ${broadcast.test_settings.test_duration_hours} hours based on highest ${broadcast.test_settings.auto_send_winner_metric === 'open_rate' ? t`opens` : t`clicks`}`}
-                              </span>
-                            </div>
-                          </Descriptions.Item>
-                        )}
-
-                      {testResults && testResults.recommended_winner && (
-                        <Descriptions.Item label={t`Recommended Winner`}>
-                          <Space>
-                            <Badge status="processing" text={t`Recommended`} />
-                            {Object.values(testResults.variation_results).find(
-                              (result) => result.template_id === testResults.recommended_winner
-                            )?.template_name || t`Unknown`}
-                          </Space>
-                        </Descriptions.Item>
-                      )}
-
-                      {testResults && testResults.winning_template && (
-                        <Descriptions.Item label={t`Selected Winner`}>
-                          <Space>
-                            <Badge status="success" text={t`Winner`} />
-                            {Object.values(testResults.variation_results).find(
-                              (result) => result.template_id === testResults.winning_template
-                            )?.template_name || t`Unknown`}
-                          </Space>
-                        </Descriptions.Item>
-                      )}
-                    </Descriptions>
-                  </>
-                )}
-              </Col>
-            </Row>
+            </Tooltip>
+            <Tooltip title={t`Preview Template`}>
+              <span>
+                <TemplatePreviewDrawer
+                  record={toTemplateApiType(primaryTemplate)}
+                  workspace={currentWorkspace}
+                >
+                  <Button
+                    size="small"
+                    type="text"
+                    ghost
+                    icon={<FontAwesomeIcon icon={faEye} className="opacity-70" />}
+                  />
+                </TemplatePreviewDrawer>
+              </span>
+            </Tooltip>
           </div>
-        )}
-      </div>
+        )
+      })()}
 
       {/* Test Template Modal */}
       {currentWorkspace && (
@@ -1380,9 +961,6 @@ export function BroadcastsPage() {
               onRefresh={handleRefreshBroadcast}
               currentWorkspace={currentWorkspace}
               permissions={permissions}
-              isFirst={index === 0}
-              currentPage={currentPage}
-              pageSize={pageSize}
             />
           ))}
 

@@ -31,8 +31,9 @@ import {
   DownOutlined
 } from '@ant-design/icons'
 import {
-  HIDDEN_WORKSPACE_NAV_KEYS,
-  isHiddenWorkspaceNavPath
+  getBrandHiddenWorkspaceNavKeys,
+  isHiddenWorkspaceNavPath,
+  isMailStudioAdmin
 } from '../lib/hidden-mail-studio-nav'
 
 const { Content, Sider, Header } = Layout
@@ -72,6 +73,9 @@ export function WorkspaceLayout() {
   const matches = useMatches()
   const currentPath = matches[matches.length - 1]?.pathname || ''
   const isSettingsPage = currentPath.includes('/settings') || currentPath.includes('/blog')
+  const isAdmin = isMailStudioAdmin(user?.email)
+  const showTopBar = isAdmin
+  const brandHiddenNavKeys = getBrandHiddenWorkspaceNavKeys(user?.email)
 
   // Fetch user permissions for the current workspace
   useEffect(() => {
@@ -148,19 +152,21 @@ export function WorkspaceLayout() {
     return permissions?.read || permissions?.write || false
   }
 
-  // Hidden Mail Studio features: no menu entry, and a typed URL sends you home.
+  // Brand-hidden Mail Studio features: no menu entry; typed URL sends home.
   useEffect(() => {
-    if (!workspaceId || !isHiddenWorkspaceNavPath(currentPath)) return
+    if (!workspaceId || !isHiddenWorkspaceNavPath(currentPath, user?.email)) return
     navigate({
       to: '/console/workspace/$workspaceId',
       params: { workspaceId },
       replace: true
     })
-  }, [currentPath, workspaceId, navigate])
+  }, [currentPath, workspaceId, navigate, user?.email])
 
   // Determine which key should be selected based on the current path
   let selectedKey = 'analytics' // Default to analytics/dashboard
-  if (currentPath.includes('/settings')) {
+  if (currentPath.includes('/email-senders')) {
+    selectedKey = 'email-senders'
+  } else if (currentPath.includes('/settings')) {
     selectedKey = 'settings'
   } else if (currentPath.includes('/lists')) {
     selectedKey = 'lists'
@@ -408,6 +414,31 @@ export function WorkspaceLayout() {
       )
     },
     hasAccess('workspace') && {
+      key: 'email-senders',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="opacity-70"
+        >
+          <rect width="20" height="16" x="2" y="4" rx="2" />
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+        </svg>
+      ),
+      label: (
+        <Link to="/console/workspace/$workspaceId/email-senders" params={{ workspaceId }}>
+          {t`Mail address`}
+        </Link>
+      )
+    },
+    hasAccess('workspace') && {
       key: 'settings',
       icon: <SettingOutlined />,
       label: (
@@ -419,9 +450,7 @@ export function WorkspaceLayout() {
   ].filter(
     (item) =>
       Boolean(item) &&
-      !(HIDDEN_WORKSPACE_NAV_KEYS as readonly string[]).includes(
-        (item as { key: string }).key
-      )
+      !brandHiddenNavKeys.includes((item as { key: string }).key)
   ) as Array<{ key: string; icon: React.ReactNode; label: React.ReactNode }>
 
   return (
@@ -519,24 +548,47 @@ export function WorkspaceLayout() {
                 zIndex: 1
               }}
             >
-              <div className="flex items-center justify-between">
-                {!collapsed && (
-                  <span className="text-[11px] font-medium text-[#5e6b8c]">
-                    Mail Studio v{window.VERSION || '2.4'}
-                  </span>
+              <div className="flex flex-col gap-2">
+                {!showTopBar && (
+                  <Button
+                    type="text"
+                    size="small"
+                    block={!collapsed}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 justify-start"
+                    icon={<FontAwesomeIcon icon={faPowerOff} size="sm" />}
+                    onClick={() => signout()}
+                  >
+                    {!collapsed && t`Logout`}
+                  </Button>
                 )}
-                <Button
-                  type="text"
-                  size="small"
-                  className="text-[#5e6b8c] hover:text-[#0b1433] hover:bg-[#f2f6ff]"
-                  icon={<FontAwesomeIcon icon={collapsed ? faAngleRight : faAngleLeft} />}
-                  onClick={() => setCollapsed(!collapsed)}
-                >
-                  {!collapsed && t`Collapse`}
-                </Button>
+                <div className="flex items-center justify-between">
+                  {!collapsed && (
+                    <span className="text-[11px] font-medium text-[#5e6b8c]">
+                      Mail Studio v{window.VERSION || '2.4'}
+                    </span>
+                  )}
+                  <Button
+                    type="text"
+                    size="small"
+                    className="text-[#5e6b8c] hover:text-[#0b1433] hover:bg-[#f2f6ff]"
+                    icon={<FontAwesomeIcon icon={collapsed ? faAngleRight : faAngleLeft} />}
+                    onClick={() => setCollapsed(!collapsed)}
+                  >
+                    {!collapsed && t`Collapse`}
+                  </Button>
+                </div>
               </div>
             </div>
           </Sider>
+          {!showTopBar && isMobile && collapsed && (
+            <Button
+              type="primary"
+              className="fixed top-3 left-3 z-40 shadow-md"
+              icon={<FontAwesomeIcon icon={faBarsStaggered} />}
+              onClick={() => setCollapsed(false)}
+            />
+          )}
+          {showTopBar ? (
           <Header
             style={{
               position: 'fixed',
@@ -650,10 +702,11 @@ export function WorkspaceLayout() {
               </Dropdown>
             </Space>
           </Header>
+          ) : null}
           <Layout
             style={{
               marginLeft: isMobile ? '0' : (collapsed ? '80px' : '250px'),
-              marginTop: '64px',
+              marginTop: showTopBar ? '64px' : '0',
               padding: isSettingsPage ? '0' : (isMobile ? '12px 8px' : '24px'),
               transition: 'margin-left 0.2s',
               backgroundColor: '#f7f9ff'

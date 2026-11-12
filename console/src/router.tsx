@@ -9,6 +9,7 @@ import { AcceptInvitationPage } from './pages/AcceptInvitationPage'
 import { CreateWorkspacePage } from './pages/CreateWorkspacePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage'
+import { EmailSendersPage } from './pages/EmailSendersPage'
 import { ContactsPage } from './pages/ContactsPage'
 import { ListsPage } from './pages/ListsPage'
 import { FileManagerPage } from './pages/FileManagerPage'
@@ -240,6 +241,12 @@ const workspaceSettingsRoute = createRoute({
   component: WorkspaceSettingsPage
 })
 
+const workspaceEmailSendersRoute = createRoute({
+  getParentRoute: () => workspaceRoute,
+  path: '/email-senders',
+  component: EmailSendersPage
+})
+
 const workspaceTemplatesRoute = createRoute({
   getParentRoute: () => workspaceRoute,
   path: '/templates',
@@ -292,6 +299,7 @@ const routeTree = rootRoute.addChildren([
     workspaceFileManagerRoute,
     workspaceSettingsRedirectRoute,
     workspaceSettingsRoute,
+    workspaceEmailSendersRoute,
     workspaceTemplatesRoute,
     workspaceAnalyticsRoute,
     workspaceNewSegmentRoute,

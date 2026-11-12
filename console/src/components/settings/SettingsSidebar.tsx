@@ -7,7 +7,7 @@ import {
   MailOutlined
 } from '@ant-design/icons'
 import { useLingui } from '@lingui/react/macro'
-import { HIDDEN_SETTINGS_SECTIONS } from '../../lib/hidden-mail-studio-nav'
+import { BRAND_HIDDEN_SETTINGS_SECTIONS } from '../../lib/hidden-mail-studio-nav'
 
 export type SettingsSection =
   | 'team'
@@ -23,9 +23,16 @@ interface SettingsSidebarProps {
   activeSection: SettingsSection
   onSectionChange: (section: SettingsSection) => void
   isOwner: boolean
+  /** Root / admin keeps every settings tab; brands hide most. */
+  isAdmin?: boolean
 }
 
-export function SettingsSidebar({ activeSection, onSectionChange, isOwner }: SettingsSidebarProps) {
+export function SettingsSidebar({
+  activeSection,
+  onSectionChange,
+  isOwner,
+  isAdmin = false
+}: SettingsSidebarProps) {
   const { t } = useLingui()
 
   const menuItems = [
@@ -124,9 +131,11 @@ export function SettingsSidebar({ activeSection, onSectionChange, isOwner }: Set
     })
   }
 
-  const visibleMenuItems = menuItems.filter(
-    (item) => !(HIDDEN_SETTINGS_SECTIONS as readonly string[]).includes(item.key)
-  )
+  const visibleMenuItems = isAdmin
+    ? menuItems
+    : menuItems.filter(
+        (item) => !(BRAND_HIDDEN_SETTINGS_SECTIONS as readonly string[]).includes(item.key)
+      )
 
   return (
     <div

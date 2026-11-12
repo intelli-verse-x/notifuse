@@ -16,7 +16,8 @@ import { DeleteWorkspaceSection } from '../components/settings/DeleteWorkspace'
 import { SettingsSidebar, SettingsSection } from '../components/settings/SettingsSidebar'
 import {
   DEFAULT_SETTINGS_SECTION,
-  isHiddenSettingsSection
+  isHiddenSettingsSection,
+  isMailStudioAdmin
 } from '../lib/hidden-mail-studio-nav'
 
 const { Sider, Content } = Layout
@@ -35,6 +36,7 @@ export function WorkspaceSettingsPage() {
   const [canManageBlog, setCanManageBlog] = useState(false)
   const { refreshWorkspaces, user, workspaces } = useAuth()
   const navigate = useNavigate()
+  const isAdmin = isMailStudioAdmin(user?.email)
 
   // Valid settings sections
   const validSections: SettingsSection[] = [
@@ -50,15 +52,26 @@ export function WorkspaceSettingsPage() {
 
   // Get active section from URL or default to the first visible tab
   const activeSection: SettingsSection =
-    validSections.includes(section as SettingsSection) && !isHiddenSettingsSection(section)
+    validSections.includes(section as SettingsSection) &&
+    !isHiddenSettingsSection(section, user?.email)
       ? (section as SettingsSection)
       : DEFAULT_SETTINGS_SECTION
 
   useEffect(() => {
+    if (!user) return
+    // Brands use the Mail address sidebar item instead of Settings.
+    if (!isAdmin) {
+      navigate({
+        to: '/console/workspace/$workspaceId/email-senders',
+        params: { workspaceId },
+        replace: true
+      })
+      return
+    }
     // Redirect away from invalid or hidden settings sections
     if (
       !validSections.includes(section as SettingsSection) ||
-      isHiddenSettingsSection(section)
+      isHiddenSettingsSection(section, user.email)
     ) {
       navigate({
         to: '/console/workspace/$workspaceId/settings/$section',
@@ -67,7 +80,7 @@ export function WorkspaceSettingsPage() {
       })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- validSections is static
-  }, [section, workspaceId, navigate])
+  }, [section, workspaceId, navigate, isAdmin, user])
 
   useEffect(() => {
     // Find the workspace from the auth context
@@ -204,6 +217,7 @@ export function WorkspaceSettingsPage() {
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
           isOwner={isOwner}
+          isAdmin={isAdmin}
         />
       </Sider>
       <Layout className="!bg-transparent">

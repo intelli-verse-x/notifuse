@@ -95,6 +95,8 @@ interface IntegrationsProps {
   loading: boolean
   isOwner: boolean
   canManageSenders?: boolean
+  /** Brand Mail address page: email / SES only, no other integrations chrome. */
+  sendersOnly?: boolean
 }
 
 // EmailIntegration component props
@@ -482,7 +484,8 @@ export function Integrations({
   onSave,
   loading,
   isOwner,
-  canManageSenders = false
+  canManageSenders = false,
+  sendersOnly = false
 }: IntegrationsProps) {
   const { t } = useLingui()
   // State for providers
@@ -1161,6 +1164,10 @@ export function Integrations({
                 />
               </div>
             )
+          }
+
+          if (sendersOnly) {
+            return null
           }
 
           if (integration.type === 'supabase') {
@@ -2182,14 +2189,21 @@ export function Integrations({
     }
   ]
 
+  const emailIntegrations =
+    workspace?.integrations?.filter((item) => item.type === 'email' && item.email_provider) || []
+
   return (
     <>
       <SettingsSectionHeader
-        title={t`Integrations`}
-        description={t`Connect and manage external services`}
+        title={sendersOnly ? t`Mail address` : t`Integrations`}
+        description={
+          sendersOnly
+            ? t`Update the email address your mail is sent from`
+            : t`Connect and manage external services`
+        }
       />
 
-      {isOwner && (workspace?.integrations?.length ?? 0) > 0 && (
+      {!sendersOnly && isOwner && (workspace?.integrations?.length ?? 0) > 0 && (
         <div style={{ textAlign: 'right', marginBottom: 16 }}>
           <Dropdown menu={{ items: integrationMenuItems }} trigger={['click']}>
             <Button type="primary" size="small" ghost>
@@ -2200,7 +2214,7 @@ export function Integrations({
       )}
 
       {/* Check and display alert for missing email provider configuration */}
-      {workspace && (
+      {!sendersOnly && workspace && (
         <>
           {(!workspace.settings.transactional_email_provider_id ||
             !workspace.settings.marketing_email_provider_id) && (
@@ -2228,9 +2242,20 @@ export function Integrations({
         </>
       )}
 
-      {(workspace?.integrations?.length ?? 0) === 0
-        ? renderAvailableIntegrations()
-        : renderWorkspaceIntegrations()}
+      {sendersOnly
+        ? emailIntegrations.length === 0
+          ? (
+              <Alert
+                message={t`No mail address yet`}
+                description={t`Ask an admin to connect email for this workspace, then you can update the From address here.`}
+                type="info"
+                showIcon
+              />
+            )
+          : renderWorkspaceIntegrations()
+        : (workspace?.integrations?.length ?? 0) === 0
+          ? renderAvailableIntegrations()
+          : renderWorkspaceIntegrations()}
 
       {/* Provider Configuration Drawer */}
       {renderProviderDrawer()}

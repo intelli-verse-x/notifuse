@@ -435,7 +435,8 @@ export function WorkspaceLayout() {
       ),
       label: (
         <Link to="/console/workspace/$workspaceId/email-senders" params={{ workspaceId }}>
-          {t`Mail address`}
+          {/* Plain string: Lingui catalog missing Mail address (showed eOlBfg). */}
+          Mail address
         </Link>
       )
     },

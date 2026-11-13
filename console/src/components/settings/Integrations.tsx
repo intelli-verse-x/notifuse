@@ -345,7 +345,7 @@ const EmailIntegration = ({
     >
       <Descriptions bordered size="small" column={1} className="mt-2">
         <Descriptions.Item label={t`Name`}>{integration.name}</Descriptions.Item>
-        <Descriptions.Item label={t`Senders`}>
+        <Descriptions.Item label={t`Mail address`}>
           {provider.senders && provider.senders.length > 0 ? (
             <div>
               {provider.senders.map((sender, index) => (
@@ -360,7 +360,7 @@ const EmailIntegration = ({
               ))}
             </div>
           ) : (
-            <span>{t`No senders configured`}</span>
+            <span>{t`No mail address configured`}</span>
           )}
         </Descriptions.Item>
         <Descriptions.Item label={t`Used for`}>
@@ -1946,7 +1946,7 @@ export function Integrations({
         title: (
           <div className="flex justify-end">
             <Button type="primary" ghost size="small" onClick={addSender} disabled={!canManageSenders}>
-              {t`Add Sender`}
+              {t`Add address`}
             </Button>
           </div>
         ),
@@ -1995,7 +1995,7 @@ export function Integrations({
 
     return (
       <Form.Item
-        label={t`Senders`}
+        label={t`Mail address`}
         required
         tooltip={t`Add one or more From addresses. The address must already be verified on this workspace's sending domain.`}
       >
@@ -2012,7 +2012,7 @@ export function Integrations({
         ) : (
           <div className="flex justify-center py-6">
             <Button type="primary" onClick={addSender} disabled={!canManageSenders}>
-              <FontAwesomeIcon icon={faPlus} className="mr-1" /> {t`Add Sender`}
+              <FontAwesomeIcon icon={faPlus} className="mr-1" /> {t`Add address`}
             </Button>
           </div>
         )}

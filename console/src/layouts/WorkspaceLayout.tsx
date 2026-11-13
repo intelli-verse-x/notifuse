@@ -348,7 +348,8 @@ export function WorkspaceLayout() {
           to="/console/workspace/$workspaceId/transactional-notifications"
           params={{ workspaceId }}
         >
-          {t`Transactional`}
+          {/* Plain string: Lingui hash (eOlBfg) showed when catalog missed Transactional. Brands hide this nav. */}
+          Transactional
         </Link>
       )
     },

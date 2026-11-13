@@ -51,7 +51,7 @@ export function EmailSendersPage() {
           member?.role === 'owner' || member?.permissions?.workspace?.write === true
         )
       } catch (error) {
-        console.error(t`Failed to load senders permissions`, error)
+        console.error(t`Failed to load mail address permissions`, error)
         if (!cancelled) {
           setIsOwner(false)
           setCanManageSenders(false)

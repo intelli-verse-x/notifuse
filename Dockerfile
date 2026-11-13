@@ -17,7 +17,8 @@ RUN npm config set fetch-retries 5 && \
 COPY console/ ./
 
 # Build frontend in production mode
-RUN npm run build
+ARG CACHEBUST=1
+RUN echo "cachebust=$CACHEBUST" && npm run build
 
 # Stage 2: Build the notification center frontend
 FROM node:22-alpine AS notification-center-builder

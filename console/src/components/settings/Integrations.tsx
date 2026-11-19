@@ -345,7 +345,7 @@ const EmailIntegration = ({
     >
       <Descriptions bordered size="small" column={1} className="mt-2">
         <Descriptions.Item label={t`Name`}>{integration.name}</Descriptions.Item>
-        <Descriptions.Item label={t`Mail address`}>
+        <Descriptions.Item label={"Mail address"}>
           {provider.senders && provider.senders.length > 0 ? (
             <div>
               {provider.senders.map((sender, index) => (
@@ -360,7 +360,7 @@ const EmailIntegration = ({
               ))}
             </div>
           ) : (
-            <span>{t`No mail address configured`}</span>
+            <span>{"No mail address configured"}</span>
           )}
         </Descriptions.Item>
         <Descriptions.Item label={t`Used for`}>
@@ -1946,7 +1946,7 @@ export function Integrations({
         title: (
           <div className="flex justify-end">
             <Button type="primary" ghost size="small" onClick={addSender} disabled={!canManageSenders}>
-              {t`Add address`}
+              {"Add address"}
             </Button>
           </div>
         ),
@@ -1995,7 +1995,7 @@ export function Integrations({
 
     return (
       <Form.Item
-        label={t`Mail address`}
+        label={"Mail address"}
         required
         tooltip={t`Add one or more From addresses. The address must already be verified on this workspace's sending domain.`}
       >
@@ -2012,7 +2012,7 @@ export function Integrations({
         ) : (
           <div className="flex justify-center py-6">
             <Button type="primary" onClick={addSender} disabled={!canManageSenders}>
-              <FontAwesomeIcon icon={faPlus} className="mr-1" /> {t`Add address`}
+              <FontAwesomeIcon icon={faPlus} className="mr-1" /> {"Add address"}
             </Button>
           </div>
         )}
@@ -2226,7 +2226,7 @@ export function Integrations({
   return (
     <>
       <SettingsSectionHeader
-        title={sendersOnly ? t`Mail address` : t`Integrations`}
+        title={sendersOnly ? "Mail address" : t`Integrations`}
         description={
           sendersOnly
             ? t`Update the email address your mail is sent from`
@@ -2277,7 +2277,7 @@ export function Integrations({
         ? emailIntegrations.length === 0
           ? (
               <Alert
-                message={t`No mail address yet`}
+                message={"No mail address yet"}
                 description={t`Ask an admin to connect email for this workspace, then you can update the From address here.`}
                 type="info"
                 showIcon
@@ -2293,7 +2293,7 @@ export function Integrations({
 
       {/* Sender Form Modal */}
       <Modal
-        title={editingSenderIndex !== null ? t`Edit Sender` : t`Add Sender`}
+        title={editingSenderIndex !== null ? "Edit address" : "Add address"}
         open={senderFormVisible}
         onCancel={() => setSenderFormVisible(false)}
         footer={[

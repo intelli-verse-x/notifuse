@@ -214,7 +214,7 @@ func (s *TemplateService) CreateTemplate(ctx context.Context, workspaceID string
 		actorEmail = user.Email
 	}
 	charged := false
-	if shouldChargeTemplateFee(actorEmail) {
+	if shouldChargeTemplateFee(actorEmail, workspaceID) {
 		if err := chargeTemplateFee(workspaceID, template.ID, actorEmail); err != nil {
 			return err
 		}

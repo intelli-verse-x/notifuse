@@ -55,7 +55,7 @@ func (h *TemplateHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	templates, err := h.service.GetTemplates(r.Context(), req.WorkspaceID, req.Category, req.Channel)
 	if err != nil {
 		h.logger.WithField("error", err.Error()).Error("Failed to get templates")
-		WriteJSONError(w, "Failed to get templates", http.StatusInternalServerError)
+		writeTemplateServiceError(w, err, "Failed to get templates")
 		return
 	}
 
@@ -119,7 +119,7 @@ func (h *TemplateHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		WriteJSONError(w, "Failed to create template", http.StatusInternalServerError)
+		writeTemplateServiceError(w, err, "Failed to create template")
 		return
 	}
 
@@ -226,4 +226,41 @@ func (h *TemplateHandler) handleCompile(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// Prefer honest client messages for auth / fee / permission failures instead of a bare 500.
+func writeTemplateServiceError(w http.ResponseWriter, err error, fallback string) {
+	if err == nil {
+		WriteJSONError(w, fallback, http.StatusInternalServerError)
+		return
+	}
+	if pe, ok := err.(*domain.PermissionError); ok {
+		msg := pe.Message
+		if msg == "" {
+			msg = "Insufficient permissions"
+		}
+		WriteJSONError(w, msg, http.StatusForbidden)
+		return
+	}
+	msg := err.Error()
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "not a member"),
+		strings.Contains(lower, "failed to authenticate"),
+		strings.Contains(lower, "workspace not found"),
+		strings.Contains(lower, "user not found"),
+		strings.Contains(lower, "session"):
+		WriteJSONError(w, msg, http.StatusForbidden)
+	case strings.Contains(lower, "$0.50"),
+		strings.Contains(lower, "template fee"),
+		strings.Contains(lower, "email credit"),
+		strings.Contains(lower, "unknown brand"),
+		strings.Contains(lower, "wallet"):
+		WriteJSONError(w, msg, http.StatusPaymentRequired)
+	case strings.Contains(lower, "invalid template"),
+		strings.Contains(lower, "validation"):
+		WriteJSONError(w, msg, http.StatusBadRequest)
+	default:
+		WriteJSONError(w, fallback, http.StatusInternalServerError)
+	}
 }
